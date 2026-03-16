@@ -192,8 +192,8 @@ export default function Home() {
               <section className="dawn-card p-6"><TopChart /></section>
               <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4 items-start">
                 <div className="flex flex-col gap-4">
-                  <section className="dawn-card p-6"><HabitGrid /></section>
                   <section className="dawn-card p-6"><MiddleOverview /></section>
+                  <section className="dawn-card p-6"><HabitGrid /></section>
                 </div>
                 <div className="flex flex-col gap-4">
                   <section className="dawn-card p-6"><AiCoach /></section>
