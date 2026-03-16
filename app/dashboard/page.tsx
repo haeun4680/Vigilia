@@ -191,13 +191,16 @@ export default function Home() {
               className="space-y-4"
             >
               <section className="dawn-card p-6"><TopChart /></section>
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-4 items-start">
+                <section className="dawn-card p-6"><HabitGrid /></section>
+                <div className="flex flex-col gap-4">
+                  <section className="dawn-card p-6"><AiCoach /></section>
+                </div>
+              </div>
               <section className="dawn-card p-6"><MiddleOverview /></section>
               <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-4 items-start">
                 <section className="dawn-card p-6"><MonthlyGrid /></section>
-                <div className="flex flex-col gap-4">
-                  <section className="dawn-card p-6"><RightSidebar /></section>
-                  <section className="dawn-card p-6"><AiCoach /></section>
-                </div>
+                <section className="dawn-card p-6"><RightSidebar /></section>
               </div>
             </motion.div>
           )}
