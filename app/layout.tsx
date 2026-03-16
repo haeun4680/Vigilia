@@ -15,8 +15,8 @@ const notoSansKR = Noto_Sans_KR({
 });
 
 export const metadata: Metadata = {
-  title: "루틴 — 나만의 습관 기록",
-  description: "조용한 새벽, 나를 만드는 루틴",
+  title: "Vigilia — 달빛 아래 루틴을 지키는 곳",
+  description: "작은 습관이 쌓여 큰 변화가 됩니다. AI 루틴 코치와 함께 나만의 루틴을 만들어가세요.",
 };
 
 export default function RootLayout({
