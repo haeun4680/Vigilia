@@ -2,47 +2,88 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Mail, Lock, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 
-export default function LoginPage() {
-  const router = useRouter();
-  const [mode, setMode] = useState<"login" | "signup">("login");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [showPw, setShowPw] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
+function GoogleIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 48 48">
+      <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+      <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
+      <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>
+      <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.18 1.48-4.97 2.31-8.16 2.31-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+    </svg>
+  );
+}
 
+function KakaoIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24">
+      <path fill="#3C1E1E" d="M12 3C6.477 3 2 6.477 2 10.8c0 2.7 1.617 5.076 4.077 6.523L5.1 20.4a.3.3 0 0 0 .432.323l4.05-2.7A11.6 11.6 0 0 0 12 18.6c5.523 0 10-3.477 10-7.8S17.523 3 12 3z"/>
+    </svg>
+  );
+}
+
+function NaverIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24">
+      <path fill="#03C75A" d="M16.273 12.845 7.376 0H0v24h7.727V11.155L16.624 24H24V0h-7.727z"/>
+    </svg>
+  );
+}
+
+export default function LoginPage() {
+  const [loading, setLoading] = useState<string | null>(null);
   const supabase = createClient();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError("");
-    setMessage("");
-
-    if (mode === "login") {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) {
-        setError("이메일 또는 비밀번호가 올바르지 않아요.");
-      } else {
-        router.push("/dashboard");
-        router.refresh();
-      }
-    } else {
-      const { error } = await supabase.auth.signUp({ email, password });
-      if (error) {
-        setError(error.message);
-      } else {
-        setMessage("확인 이메일을 보냈어요! 메일함을 확인해주세요.");
-      }
-    }
-    setLoading(false);
+  const signInWith = async (provider: "google" | "kakao") => {
+    setLoading(provider);
+    await supabase.auth.signInWithOAuth({
+      provider,
+      options: {
+        redirectTo: `${window.location.origin}/dashboard`,
+      },
+    });
+    setLoading(null);
   };
+
+  const signInWithNaver = async () => {
+    setLoading("naver");
+    // Naver는 Supabase custom OIDC — 설정 필요 시 활성화
+    alert("네이버 로그인은 현재 준비 중이에요.");
+    setLoading(null);
+  };
+
+  const socialButtons = [
+    {
+      key: "google" as const,
+      label: "Google로 계속하기",
+      icon: <GoogleIcon />,
+      bg: "#fff",
+      color: "#3c4043",
+      border: "rgba(0,0,0,0.12)",
+      onClick: () => signInWith("google"),
+    },
+    {
+      key: "kakao" as const,
+      label: "카카오로 계속하기",
+      icon: <KakaoIcon />,
+      bg: "#FEE500",
+      color: "#3C1E1E",
+      border: "transparent",
+      onClick: () => signInWith("kakao"),
+    },
+    {
+      key: "naver" as const,
+      label: "네이버로 계속하기",
+      icon: <NaverIcon />,
+      bg: "#03C75A",
+      color: "#fff",
+      border: "transparent",
+      onClick: signInWithNaver,
+    },
+  ];
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4" style={{ background: "var(--bg)" }}>
@@ -58,9 +99,8 @@ export default function LoginPage() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="relative w-full max-w-sm"
+        className="relative w-full max-w-xs"
       >
-        {/* 뒤로가기 */}
         <Link href="/">
           <motion.div whileHover={{ x: -3 }}
             className="flex items-center gap-1.5 mb-6 text-xs"
@@ -72,94 +112,60 @@ export default function LoginPage() {
 
         <div className="dawn-card p-8 space-y-6">
           {/* 헤더 */}
-          <div className="text-center space-y-2">
-            <div className="flex justify-center mb-4">
-              <div className="w-12 h-12 rounded-full"
+          <div className="text-center space-y-3">
+            <div className="flex justify-center">
+              <div className="w-14 h-14 rounded-full"
                 style={{
-                  background: "radial-gradient(circle at 35% 30%, rgba(200,235,255,0.8) 0%, rgba(80,145,230,0.5) 40%, rgba(20,60,160,0.3) 70%, transparent 100%)",
+                  background: `
+                    radial-gradient(circle at 32% 28%, rgba(220,240,255,0.9) 0%, rgba(160,210,255,0.7) 15%, transparent 38%),
+                    radial-gradient(circle at 50% 50%, rgba(130,190,250,0.85) 0%, rgba(70,135,225,0.6) 40%, rgba(25,70,170,0.35) 70%, transparent 100%)
+                  `,
                   border: "1px solid rgba(160,215,255,0.3)",
-                  boxShadow: "0 0 30px rgba(43,143,240,0.3)",
+                  boxShadow: "0 0 30px rgba(43,143,240,0.35), inset 0 1px 0 rgba(200,235,255,0.4)",
                 }} />
             </div>
-            <h1 className="text-xl font-bold" style={{ color: "var(--text-1)", fontFamily: "var(--font-en)" }}>
-              Vigilia
-            </h1>
-            <p className="text-xs" style={{ color: "var(--text-3)" }}>
-              {mode === "login" ? "루틴을 이어가세요" : "새로운 루틴을 시작하세요"}
-            </p>
+            <div>
+              <h1 className="text-xl font-bold" style={{ color: "var(--text-1)", fontFamily: "var(--font-en)" }}>
+                Vigilia
+              </h1>
+              <p className="text-xs mt-1" style={{ color: "var(--text-3)" }}>
+                달빛 아래, 루틴을 시작하세요
+              </p>
+            </div>
           </div>
 
-          {/* 탭 */}
-          <div className="flex p-1 rounded-xl gap-1"
-            style={{ background: "rgba(136,192,224,0.04)", border: "1px solid var(--border-2)" }}>
-            {(["login", "signup"] as const).map((m) => (
-              <button key={m} onClick={() => { setMode(m); setError(""); setMessage(""); }}
-                className="flex-1 py-2 rounded-lg text-xs font-medium transition-all duration-200"
+          {/* 소셜 로그인 버튼 */}
+          <div className="space-y-3">
+            {socialButtons.map(({ key, label, icon, bg, color, border, onClick }, i) => (
+              <motion.button
+                key={key}
+                onClick={onClick}
+                disabled={!!loading}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.07 }}
+                whileHover={{ scale: 1.02, y: -1 }}
+                whileTap={{ scale: 0.98 }}
+                className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-opacity"
                 style={{
-                  background: mode === m ? "rgba(43,143,240,0.12)" : "transparent",
-                  color: mode === m ? "var(--blue)" : "var(--text-3)",
-                  border: mode === m ? "1px solid rgba(43,143,240,0.2)" : "1px solid transparent",
-                }}>
-                {m === "login" ? "로그인" : "회원가입"}
-              </button>
+                  background: bg,
+                  color,
+                  border: `1px solid ${border}`,
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                  opacity: loading && loading !== key ? 0.5 : 1,
+                }}
+              >
+                <span className="flex-shrink-0">{icon}</span>
+                <span className="flex-1 text-center">
+                  {loading === key ? "연결 중..." : label}
+                </span>
+              </motion.button>
             ))}
           </div>
 
-          {/* 폼 */}
-          <form onSubmit={handleSubmit} className="space-y-3">
-            <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: "var(--text-3)" }} />
-              <input
-                type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                placeholder="이메일"
-                required
-                className="w-full pl-9 pr-4 py-2.5 rounded-xl text-sm bg-transparent"
-                style={{
-                  border: "1px solid var(--border-1)",
-                  color: "var(--text-1)",
-                  outline: "none",
-                }}
-              />
-            </div>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5" style={{ color: "var(--text-3)" }} />
-              <input
-                type={showPw ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)}
-                placeholder="비밀번호 (6자 이상)"
-                required minLength={6}
-                className="w-full pl-9 pr-10 py-2.5 rounded-xl text-sm bg-transparent"
-                style={{
-                  border: "1px solid var(--border-1)",
-                  color: "var(--text-1)",
-                  outline: "none",
-                }}
-              />
-              <button type="button" onClick={() => setShowPw(!showPw)}
-                className="absolute right-3 top-1/2 -translate-y-1/2"
-                style={{ color: "var(--text-3)" }}>
-                {showPw ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-              </button>
-            </div>
-
-            {error && (
-              <p className="text-xs text-center" style={{ color: "#c87070" }}>{error}</p>
-            )}
-            {message && (
-              <p className="text-xs text-center" style={{ color: "var(--blue)" }}>{message}</p>
-            )}
-
-            <motion.button
-              type="submit" disabled={loading}
-              whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-              className="w-full py-3 rounded-xl text-sm font-semibold mt-2"
-              style={{
-                background: loading ? "rgba(43,143,240,0.4)" : "var(--blue)",
-                color: "#fff",
-                boxShadow: loading ? "none" : "0 0 20px rgba(43,143,240,0.3)",
-              }}>
-              {loading ? "처리 중..." : mode === "login" ? "로그인" : "가입하기"}
-            </motion.button>
-          </form>
+          <p className="text-center text-[11px]" style={{ color: "var(--text-4)" }}>
+            로그인 시 서비스 이용약관에 동의하게 됩니다
+          </p>
         </div>
       </motion.div>
     </div>
