@@ -34,14 +34,12 @@ export function HabitGrid() {
   // 추가
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");
-  const [newGoal, setNewGoal] = useState("7일");
   const [newIcon, setNewIcon] = useState("⭐");
 
   // 수정
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editIcon, setEditIcon] = useState("");
   const [editName, setEditName] = useState("");
-  const [editGoal, setEditGoal] = useState("");
 
   // hover
   const [hoverRow, setHoverRow] = useState<string | null>(null);
@@ -64,8 +62,8 @@ export function HabitGrid() {
 
   const addHabit = async () => {
     if (!newName.trim() || !userId) return;
-    await supabase.from("habits").insert({ user_id: userId, icon: newIcon, name: newName.trim(), goal: newGoal });
-    setNewName(""); setNewGoal("7일"); setNewIcon("⭐"); setAdding(false);
+    await supabase.from("habits").insert({ user_id: userId, icon: newIcon, name: newName.trim(), goal: "ongoing" });
+    setNewName(""); setNewIcon("⭐"); setAdding(false);
     await refresh();
   };
 
@@ -73,12 +71,11 @@ export function HabitGrid() {
     setEditingId(habit.id);
     setEditIcon(habit.icon);
     setEditName(habit.name);
-    setEditGoal(habit.goal);
   };
 
   const saveEdit = async () => {
     if (!editingId || !editName.trim()) return;
-    await supabase.from("habits").update({ icon: editIcon, name: editName.trim(), goal: editGoal }).eq("id", editingId);
+    await supabase.from("habits").update({ icon: editIcon, name: editName.trim() }).eq("id", editingId);
     setEditingId(null);
     await refresh();
   };
@@ -102,11 +99,8 @@ export function HabitGrid() {
       <table className="w-full border-collapse min-w-[540px]">
         <thead>
           <tr>
-            <th className="text-left pb-3 pr-4 w-[200px]">
+            <th className="text-left pb-3 pr-4 w-[220px]">
               <span className="label-text">나의 루틴</span>
-            </th>
-            <th className="text-left pb-3 pr-6 w-[80px]">
-              <span className="label-text">목표</span>
             </th>
             {weekDates.map((d, i) => (
               <th key={i} className="pb-3 w-10">
@@ -187,13 +181,10 @@ export function HabitGrid() {
                   )}
                 </td>
 
-                {/* 목표 셀 */}
-                <td className="py-2 pr-4">
-                  {editingId === habit.id ? (
+                {/* 편집 모드 저장/취소 */}
+                {editingId === habit.id && (
+                  <td className="py-2 pr-4">
                     <div className="flex items-center gap-1.5">
-                      <input value={editGoal} onChange={e => setEditGoal(e.target.value)}
-                        className="w-12 bg-transparent text-xs text-center focus:outline-none py-0.5"
-                        style={{ borderBottom: "1px solid var(--border-1)", color: "var(--blue)" }} />
                       <motion.button onClick={saveEdit} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
                         style={{ color: "var(--blue)" }}>
                         <Check className="w-3.5 h-3.5" />
@@ -203,10 +194,8 @@ export function HabitGrid() {
                         <X className="w-3.5 h-3.5" />
                       </motion.button>
                     </div>
-                  ) : (
-                    <span className="text-xs font-medium tabular-nums" style={{ color: "var(--lavender)" }}>{habit.goal}</span>
-                  )}
-                </td>
+                  </td>
+                )}
 
                 {/* 체크 셀 7개 */}
                 {weekDates.map(({ isToday, isPast, dateStr }) => {
@@ -267,10 +256,6 @@ export function HabitGrid() {
                       placeholder="루틴 이름..."
                       className="flex-1 bg-transparent text-sm focus:outline-none py-1"
                       style={{ borderBottom: "1px solid var(--border-1)", color: "var(--text-1)" }} />
-                    <input value={newGoal} onChange={(e) => setNewGoal(e.target.value)}
-                      placeholder="7일"
-                      className="w-14 bg-transparent text-xs text-center focus:outline-none py-1"
-                      style={{ borderBottom: "1px solid var(--border-1)", color: "var(--blue)" }} />
                     <button onClick={addHabit} style={{ color: "var(--blue)" }}><Check className="w-4 h-4" /></button>
                     <button onClick={() => setAdding(false)} style={{ color: "var(--text-3)" }}><X className="w-4 h-4" /></button>
                   </div>
