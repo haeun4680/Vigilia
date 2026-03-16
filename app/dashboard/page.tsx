@@ -6,7 +6,6 @@ import { LayoutDashboard, CalendarDays, LogOut } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { TopChart } from "@/components/dashboard/TopChart";
 import { MiddleOverview } from "@/components/dashboard/MiddleOverview";
-import { MonthlyGrid } from "@/components/dashboard/MonthlyGrid";
 import { RightSidebar } from "@/components/dashboard/RightSidebar";
 import { AiCoach } from "@/components/dashboard/AiCoach";
 import { WeeklyView } from "@/components/weekly/WeeklyView";
@@ -191,16 +190,15 @@ export default function Home() {
               className="space-y-4"
             >
               <section className="dawn-card p-6"><TopChart /></section>
-              <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-4 items-start">
-                <section className="dawn-card p-6"><HabitGrid /></section>
+              <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4 items-start">
+                <div className="flex flex-col gap-4">
+                  <section className="dawn-card p-6"><HabitGrid /></section>
+                  <section className="dawn-card p-6"><MiddleOverview /></section>
+                </div>
                 <div className="flex flex-col gap-4">
                   <section className="dawn-card p-6"><AiCoach /></section>
+                  <section className="dawn-card p-6"><RightSidebar /></section>
                 </div>
-              </div>
-              <section className="dawn-card p-6"><MiddleOverview /></section>
-              <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-4 items-start">
-                <section className="dawn-card p-6"><MonthlyGrid /></section>
-                <section className="dawn-card p-6"><RightSidebar /></section>
               </div>
             </motion.div>
           )}
