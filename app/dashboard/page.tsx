@@ -159,7 +159,7 @@ export default function Home() {
             {/* 유저 + 로그아웃 */}
             <div className="flex items-center gap-3">
               {userEmail && (
-                <p className="text-xs hidden md:block truncate max-w-[140px]" style={{ color: "var(--text-3)" }}>
+                <p className="text-xs hidden md:block truncate max-w-[140px]" style={{ color: "var(--text-2)" }}>
                   {userEmail}
                 </p>
               )}
@@ -168,9 +168,9 @@ export default function Home() {
                 whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs"
                 style={{
-                  background: "rgba(136,192,224,0.05)",
-                  border: "1px solid var(--border-2)",
-                  color: "var(--text-3)",
+                  background: "rgba(80,160,240,0.08)",
+                  border: "1px solid var(--border-1)",
+                  color: "var(--text-2)",
                 }}>
                 <LogOut className="w-3 h-3" />
                 로그아웃

@@ -37,21 +37,21 @@
   --ice:         #b8dcff;   /* 유리 파편 빛 */
   --ice-dim:     rgba(184,220,255,0.18);
 
-  --silver:      #5070a0;
-  --lavender:    #6070c0;
-  --pink:        #906080;
-  --amber:       #a08840;
-  --star:        #d8eeff;
+  --silver:      #7090c0;
+  --lavender:    #8090d8;
+  --pink:        #b080a0;
+  --amber:       #c8a850;
+  --star:        #e8f4ff;
 
   /* 텍스트 */
-  --text-1:      #e8f4ff;   /* 달빛 흰색 */
-  --text-2:      #90b8e0;   /* 은청색 */
-  --text-3:      #5a8ab8;   /* 보조 텍스트 */
-  --text-4:      #3a6090;   /* 희미한 텍스트 */
+  --text-1:      #eef6ff;   /* 달빛 흰색 */
+  --text-2:      #a8ccee;   /* 은청색 */
+  --text-3:      #7aA0cc;   /* 보조 텍스트 */
+  --text-4:      #5078a8;   /* 희미한 텍스트 */
 
   /* 테두리 */
-  --border-1:    rgba(58,143,212,0.26);
-  --border-2:    rgba(58,143,212,0.13);
+  --border-1:    rgba(80,160,240,0.35);
+  --border-2:    rgba(80,160,240,0.18);
 
   /* shadcn 호환 */
   --background:  var(--bg);
