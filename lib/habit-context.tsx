@@ -32,18 +32,18 @@ function getWeekDates() {
   });
 }
 
-// 지난 4주 날짜 범위
-function getMonthDates() {
+// 지난 365일 날짜 범위
+function getYearDates() {
   const today = new Date();
-  return Array.from({ length: 28 }, (_, i) => {
+  return Array.from({ length: 365 }, (_, i) => {
     const d = new Date(today);
-    d.setDate(today.getDate() - 27 + i);
+    d.setDate(today.getDate() - 364 + i);
     return d.toISOString().slice(0, 10);
   });
 }
 
 const weekDates = getWeekDates();
-const monthDates = getMonthDates();
+const yearDates = getYearDates();
 
 export function HabitProvider({ children }: { children: ReactNode }) {
   const supabase = createClient();
@@ -56,7 +56,8 @@ export function HabitProvider({ children }: { children: ReactNode }) {
     const [{ data: h }, { data: c }] = await Promise.all([
       supabase.from("habits").select("*").eq("user_id", uid).order("created_at"),
       supabase.from("habit_checks").select("*").eq("user_id", uid)
-        .in("checked_date", monthDates),
+        .gte("checked_date", yearDates[0])
+        .lte("checked_date", yearDates[yearDates.length - 1]),
     ]);
     setHabits(h ?? []);
     setChecks(c ?? []);

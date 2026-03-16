@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip,
@@ -21,30 +21,63 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
-const DAY_LABELS = ["MON","TUE","WED","THU","FRI","SAT","SUN"];
+type RangeKey = "1W" | "1M" | "3M" | "6M" | "1Y";
+
+const RANGES: { key: RangeKey; label: string; days: number }[] = [
+  { key: "1W", label: "1주",  days: 7   },
+  { key: "1M", label: "1달",  days: 30  },
+  { key: "3M", label: "3달",  days: 90  },
+  { key: "6M", label: "6달",  days: 180 },
+  { key: "1Y", label: "올해", days: 365 },
+];
+
+function buildChartData(habits: any[], checks: any[], days: number) {
+  const today = new Date();
+  return Array.from({ length: days }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() - (days - 1) + i);
+    const dateStr = d.toISOString().slice(0, 10);
+    const isFuture = d > today;
+
+    // 날짜 라벨: 7일은 요일, 나머지는 날짜
+    let label: string;
+    if (days <= 7) {
+      label = ["일","월","화","수","목","금","토"][d.getDay()];
+    } else if (days <= 30) {
+      label = `${d.getMonth() + 1}/${d.getDate()}`;
+    } else {
+      // 1일이면 월 표시, 나머지는 빈 값 (XAxis interval로 조절)
+      label = d.getDate() === 1 ? `${d.getMonth() + 1}월` : `${d.getDate()}`;
+    }
+
+    return {
+      label,
+      dateStr,
+      value: isFuture ? null : calcDailyRate(habits, checks, dateStr),
+    };
+  });
+}
 
 export function TopChart() {
-  const { habits, checks, weekDates } = useHabits();
+  const { habits, checks } = useHabits();
+  const [range, setRange] = useState<RangeKey>("1M");
 
-  const data = useMemo(() => {
-    return weekDates.map((dateStr, i) => {
-      const dayDate = new Date(dateStr);
-      const isToday = dayDate.toDateString() === new Date().toDateString();
-      const isFuture = dayDate > new Date() && !isToday;
-      return {
-        label: DAY_LABELS[i],
-        value: isFuture ? null : calcDailyRate(habits, checks, dateStr),
-      };
-    });
-  }, [habits, checks, weekDates]);
+  const days = RANGES.find(r => r.key === range)!.days;
+
+  const data = useMemo(
+    () => buildChartData(habits, checks, days),
+    [habits, checks, days]
+  );
 
   const stats = useMemo(() => {
-    const valid = data.filter((d) => d.value !== null) as { value: number }[];
+    const valid = data.filter(d => d.value !== null) as { value: number }[];
     if (valid.length === 0) return { avg: 0, change: 0, up: true };
     const avg = Math.round(valid.reduce((s, d) => s + d.value, 0) / valid.length);
     const change = valid.length >= 2 ? valid[valid.length - 1].value - valid[0].value : 0;
     return { avg, change, up: change >= 0 };
   }, [data]);
+
+  const xInterval = days <= 7 ? 0 : days <= 30 ? 3 : days <= 90 ? 6 : days <= 180 ? 14 : 30;
 
   return (
     <div className="w-full">
@@ -65,12 +98,29 @@ export function TopChart() {
               {stats.up ? "+" : ""}{stats.change}%
             </div>
           </div>
-          <p className="text-xs mt-1" style={{ color: "var(--text-3)" }}>이번 주 일별 달성률</p>
+          <p className="text-xs mt-1" style={{ color: "var(--text-3)" }}>평균 일별 달성률</p>
+        </div>
+
+        {/* 기간 선택 */}
+        <div className="flex items-center gap-px p-1 rounded-xl"
+          style={{ background: "rgba(136,192,224,0.04)", border: "1px solid var(--border-2)" }}>
+          {RANGES.map((r) => (
+            <button key={r.key} onClick={() => setRange(r.key)}
+              className="px-3 py-1.5 rounded-lg text-[10px] font-medium tracking-wider transition-all duration-150"
+              style={{
+                fontFamily: "var(--font-en)",
+                background: range === r.key ? "rgba(136,192,224,0.12)" : "transparent",
+                color: range === r.key ? "var(--blue)" : "var(--text-3)",
+                border: range === r.key ? "1px solid rgba(136,192,224,0.2)" : "1px solid transparent",
+              }}>
+              {r.label}
+            </button>
+          ))}
         </div>
       </div>
 
       <AnimatePresence mode="wait">
-        <motion.div key="week"
+        <motion.div key={range}
           initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0 }} transition={{ duration: 0.25 }}
           className="h-44">
@@ -84,6 +134,7 @@ export function TopChart() {
               </defs>
               <CartesianGrid vertical={false} stroke="rgba(136,192,224,0.05)" />
               <XAxis dataKey="label" axisLine={false} tickLine={false}
+                interval={xInterval}
                 tick={{ fill: "var(--text-4)", fontSize: 9, fontFamily: "monospace" }} />
               <YAxis domain={[0, 100]} axisLine={false} tickLine={false}
                 tick={{ fill: "var(--text-4)", fontSize: 9 }} />
