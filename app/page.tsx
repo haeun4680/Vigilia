@@ -1,6 +1,7 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
 import { Sparkles, BarChart2, CalendarDays, Brain, ArrowRight, Check } from "lucide-react";
 
@@ -45,7 +46,16 @@ const stats = [
   { value: "AI", label: "맞춤 분석 코치" },
 ];
 
+const previewHabits = [
+  { icon: "🧘", name: "명상",   checks: [true,  true,  true,  false, true,  true,  false] },
+  { icon: "📚", name: "독서",   checks: [true,  false, true,  true,  true,  false, false] },
+  { icon: "🏃", name: "운동",   checks: [false, true,  true,  true,  false, true,  true ] },
+  { icon: "💊", name: "비타민", checks: [true,  true,  false, true,  true,  true,  false] },
+];
+const previewDays = ["MON","TUE","WED","THU","FRI","SAT","SUN"];
+
 export default function Landing() {
+  const [moonHovered, setMoonHovered] = useState(false);
   return (
     <div className="min-h-screen" style={{ background: "var(--bg)" }}>
 
@@ -112,22 +122,130 @@ export default function Landing() {
         {/* ── Hero ── */}
         <section className="flex flex-col items-center text-center gap-8 pt-12">
 
-          {/* 달 오브 */}
+          {/* 달 + 미리보기 */}
           <motion.div
             initial={{ opacity: 0, scale: 0.85 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={{ duration: 1.0, ease: "easeOut" }}
-            className="relative"
+            className="relative flex flex-col items-center"
+            onMouseEnter={() => setMoonHovered(true)}
+            onMouseLeave={() => setMoonHovered(false)}
+            style={{ cursor: "pointer" }}
           >
-            <div className="w-28 h-28 rounded-full"
+            {/* 달 본체 */}
+            <motion.div
+              animate={{ scale: moonHovered ? 1.08 : 1, boxShadow: moonHovered
+                ? "0 0 60px rgba(43,143,240,0.55), 0 0 120px rgba(43,143,240,0.25), inset 0 1px 0 rgba(200,235,255,0.5)"
+                : "0 0 40px rgba(43,143,240,0.30), 0 0  80px rgba(43,143,240,0.12), inset 0 1px 0 rgba(180,225,255,0.3)" }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
+              className="relative w-36 h-36 rounded-full overflow-hidden"
               style={{
-                background: "radial-gradient(circle at 35% 30%, rgba(112,192,255,0.22) 0%, rgba(43,143,240,0.10) 45%, transparent 70%)",
-                border: "1px solid rgba(112,192,255,0.25)",
-                boxShadow: "0 0 40px rgba(43,143,240,0.3), 0 0 80px rgba(43,143,240,0.15), inset 0 1px 0 rgba(180,225,255,0.3)",
-              }} />
-            {/* 달 하이라이트 */}
-            <div className="absolute top-[18%] left-[22%] w-8 h-4 rounded-full blur-[6px]"
-              style={{ background: "rgba(200,230,255,0.35)" }} />
+                background: `
+                  radial-gradient(circle at 32% 28%, rgba(230,245,255,0.95) 0%,  rgba(180,220,255,0.75) 12%, transparent 35%),
+                  radial-gradient(circle at 70% 65%, rgba(60,110,190,0.35)  0%,  transparent 28%),
+                  radial-gradient(circle at 50% 50%, rgba(140,195,250,0.90) 0%,  rgba(80,145,230,0.65) 38%, rgba(35,85,185,0.45) 65%, rgba(15,45,130,0.25) 85%, transparent 100%)
+                `,
+                border: "1px solid rgba(160,215,255,0.35)",
+              }}
+            >
+              {/* 크레이터들 */}
+              <div className="absolute top-[52%] left-[55%] w-5 h-5 rounded-full"
+                style={{ background: "rgba(40,90,180,0.28)", boxShadow: "inset 1px 1px 3px rgba(20,60,150,0.4)" }} />
+              <div className="absolute top-[30%] left-[62%] w-3 h-3 rounded-full"
+                style={{ background: "rgba(50,100,190,0.22)", boxShadow: "inset 1px 1px 2px rgba(30,70,160,0.35)" }} />
+              <div className="absolute top-[65%] left-[25%] w-2.5 h-2.5 rounded-full"
+                style={{ background: "rgba(45,95,185,0.20)", boxShadow: "inset 1px 1px 2px rgba(25,65,155,0.3)" }} />
+              <div className="absolute top-[40%] left-[20%] w-2 h-2 rounded-full"
+                style={{ background: "rgba(55,105,195,0.18)" }} />
+              {/* 표면 음영 */}
+              <div className="absolute inset-0 rounded-full"
+                style={{ background: "radial-gradient(circle at 68% 62%, rgba(20,55,160,0.22) 0%, transparent 55%)" }} />
+              {/* 밝은 하이라이트 */}
+              <div className="absolute top-[14%] left-[20%] w-10 h-5 rounded-full blur-[5px]"
+                style={{ background: "rgba(220,240,255,0.45)" }} />
+              <div className="absolute top-[22%] left-[28%] w-5 h-2.5 rounded-full blur-[3px]"
+                style={{ background: "rgba(240,250,255,0.55)" }} />
+            </motion.div>
+
+            {/* 달무리 글로우 */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-52 h-52 rounded-full pointer-events-none"
+              style={{ background: "radial-gradient(circle, rgba(43,143,240,0.12) 0%, transparent 70%)" }} />
+
+            {/* 미리보기 슬라이드 */}
+            <AnimatePresence>
+              {moonHovered && (
+                <motion.div
+                  initial={{ opacity: 0, y: -8, scale: 0.96 }}
+                  animate={{ opacity: 1, y: 0,  scale: 1    }}
+                  exit={{    opacity: 0, y: -8, scale: 0.96 }}
+                  transition={{ duration: 0.35, ease: [0.25, 0.8, 0.25, 1] }}
+                  className="absolute top-[calc(100%+16px)] left-1/2 -translate-x-1/2 dawn-card p-4"
+                  style={{ width: 300, zIndex: 10 }}
+                >
+                  {/* 미니 헤더 */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-1.5 h-1.5 rounded-full status-dot" />
+                      <span className="label-text">이번 주 루틴</span>
+                    </div>
+                    <span className="text-[10px]" style={{ color: "var(--blue)", fontFamily: "var(--font-en)" }}>74%</span>
+                  </div>
+
+                  {/* 요일 헤더 */}
+                  <div className="grid mb-1.5" style={{ gridTemplateColumns: "80px repeat(7, 1fr)" }}>
+                    <div />
+                    {previewDays.map(d => (
+                      <div key={d} className="text-center text-[9px] font-medium tracking-wider"
+                        style={{ color: d === "TUE" ? "var(--blue)" : "var(--text-4)", fontFamily: "var(--font-en)" }}>{d}</div>
+                    ))}
+                  </div>
+
+                  {/* 루틴 행 */}
+                  <div className="space-y-1.5">
+                    {previewHabits.map((h, ri) => (
+                      <motion.div
+                        key={ri}
+                        initial={{ opacity: 0, x: -6 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: ri * 0.055 }}
+                        className="grid items-center"
+                        style={{ gridTemplateColumns: "80px repeat(7, 1fr)" }}
+                      >
+                        <span className="text-[11px] flex items-center gap-1" style={{ color: "var(--text-2)" }}>
+                          <span>{h.icon}</span>{h.name}
+                        </span>
+                        {h.checks.map((c, ci) => (
+                          <div key={ci} className="flex justify-center">
+                            <div className="w-5 h-5 rounded-md flex items-center justify-center"
+                              style={{
+                                background: c ? "rgba(43,143,240,0.14)" : "transparent",
+                                border: c ? "1px solid rgba(43,143,240,0.38)" : "1px solid var(--border-2)",
+                              }}>
+                              {c && <Check className="w-2.5 h-2.5" style={{ color: "var(--blue)" }} />}
+                            </div>
+                          </div>
+                        ))}
+                      </motion.div>
+                    ))}
+                  </div>
+
+                  {/* 하단 바 */}
+                  <div className="mt-3 pt-3" style={{ borderTop: "1px solid var(--border-2)" }}>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <span className="label-text">월간 달성률</span>
+                      <span className="text-[10px] font-medium" style={{ color: "var(--blue)" }}>74%</span>
+                    </div>
+                    <div className="h-1 rounded-full overflow-hidden" style={{ background: "rgba(43,143,240,0.08)" }}>
+                      <motion.div className="h-full rounded-full"
+                        initial={{ width: 0 }}
+                        animate={{ width: "74%" }}
+                        transition={{ duration: 0.6, delay: 0.2 }}
+                        style={{ background: "var(--blue)", boxShadow: "0 0 6px rgba(43,143,240,0.5)" }} />
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
 
           <motion.div
