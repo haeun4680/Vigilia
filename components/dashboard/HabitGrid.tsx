@@ -7,25 +7,32 @@ import { createClient } from "@/lib/supabase";
 import { useHabits } from "@/lib/habit-context";
 import type { Habit } from "@/lib/supabase";
 
-function getWeekDates() {
+const DAY_SHORT = ["일","월","화","수","목","금","토"];
+
+function getMonthDates() {
   const today = new Date();
-  const monday = new Date(today);
-  monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
+  const year = today.getFullYear();
+  const month = today.getMonth();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  return Array.from({ length: daysInMonth }, (_, i) => {
+    const d = new Date(year, month, i + 1);
     const isToday = d.toDateString() === today.toDateString();
-    const isPast = d < today && !isToday;
+    const isFuture = d > today && !isToday;
     return {
-      date: d.getDate(),
-      dayShort: ["MON","TUE","WED","THU","FRI","SAT","SUN"][i],
-      isToday, isPast,
+      date: i + 1,
+      dayShort: DAY_SHORT[d.getDay()],
+      isToday,
+      isPast: !isToday && !isFuture,
+      isFuture,
+      isSun: d.getDay() === 0,
+      isSat: d.getDay() === 6,
       dateStr: d.toISOString().slice(0, 10),
     };
   });
 }
 
-const weekDates = getWeekDates();
+const monthDates = getMonthDates();
+const MONTH_LABEL = new Date().toLocaleDateString("ko-KR", { year: "numeric", month: "long" });
 
 export function HabitGrid() {
   const supabase = createClient();
@@ -99,18 +106,21 @@ export function HabitGrid() {
       <table className="w-full border-collapse min-w-[540px]">
         <thead>
           <tr>
-            <th className="text-left pb-3 pr-4 w-[220px]">
-              <span className="label-text">나의 루틴</span>
+            <th className="text-left pb-3 pr-6 w-[160px]">
+              <div>
+                <span className="label-text">나의 루틴</span>
+                <p className="text-[10px] mt-0.5" style={{ color: "var(--text-3)" }}>{MONTH_LABEL}</p>
+              </div>
             </th>
-            {weekDates.map((d, i) => (
-              <th key={i} className="pb-3 w-10">
+            {monthDates.map((d, i) => (
+              <th key={i} className="pb-3" style={{ minWidth: 28 }}>
                 <div className="flex flex-col items-center gap-0.5">
-                  <span className="text-[9px] font-medium tracking-widest"
-                    style={{ color: d.isToday ? "var(--blue)" : "var(--text-4)", fontFamily: "var(--font-en)" }}>
+                  <span className="text-[8px] font-medium"
+                    style={{ color: d.isToday ? "var(--blue)" : d.isSun ? "rgba(200,100,100,0.6)" : d.isSat ? "rgba(100,150,220,0.6)" : "var(--text-4)" }}>
                     {d.dayShort}
                   </span>
-                  <span className="text-xs font-semibold"
-                    style={{ color: d.isToday ? "var(--blue)" : d.isPast ? "var(--text-3)" : "var(--text-4)", fontFamily: "var(--font-en)" }}>
+                  <span className="text-[10px] font-semibold tabular-nums"
+                    style={{ color: d.isToday ? "var(--blue)" : d.isFuture ? "var(--text-4)" : "var(--text-3)" }}>
                     {d.date}
                   </span>
                 </div>
@@ -198,26 +208,30 @@ export function HabitGrid() {
                 )}
 
                 {/* 체크 셀 7개 */}
-                {weekDates.map(({ isToday, isPast, dateStr }) => {
+                {monthDates.map(({ isToday, isPast, isFuture, dateStr }) => {
                   const checked = isChecked(habit.id, dateStr);
                   const rippleKey = `${habit.id}-${dateStr}`;
                   return (
-                    <td key={dateStr} className="py-2 text-center">
+                    <td key={dateStr} className="py-1.5 text-center">
                       <motion.button
-                        onClick={() => handleToggle(habit.id, dateStr)}
-                        className="relative mx-auto flex items-center justify-center w-7 h-7 rounded-lg focus:outline-none"
-                        animate={checked ? { scale: [1, 1.3, 0.9, 1] } : { scale: 1 }}
-                        transition={{ duration: 0.35, ease: [0.34, 1.56, 0.64, 1] }}
+                        onClick={() => !isFuture && handleToggle(habit.id, dateStr)}
+                        disabled={isFuture}
+                        className="relative mx-auto flex items-center justify-center rounded-md focus:outline-none"
+                        animate={checked ? { scale: [1, 1.25, 0.92, 1] } : { scale: 1 }}
+                        transition={{ duration: 0.3, ease: [0.34, 1.56, 0.64, 1] }}
                         style={{
-                          background: checked ? "rgba(136,192,224,0.14)" : isToday ? "rgba(136,192,224,0.04)" : "transparent",
-                          border: checked ? "1px solid rgba(136,192,224,0.4)" :
-                            isToday ? "1px solid rgba(136,192,224,0.18)" : "1px solid transparent",
-                          boxShadow: checked ? "0 0 10px rgba(136,192,224,0.25)" : "none",
+                          width: 22, height: 22,
+                          background: checked ? "rgba(136,192,224,0.16)" : isToday ? "rgba(136,192,224,0.05)" : "transparent",
+                          border: checked ? "1px solid rgba(136,192,224,0.45)" :
+                            isToday ? "1px solid rgba(136,192,224,0.2)" : "1px solid transparent",
+                          boxShadow: checked ? "0 0 8px rgba(136,192,224,0.3)" : "none",
+                          cursor: isFuture ? "default" : "pointer",
+                          opacity: isFuture ? 0.25 : 1,
                         }}>
                         <AnimatePresence>
                           {ripples[rippleKey] && (
                             <motion.span key={ripples[rippleKey]}
-                              className="absolute inset-0 rounded-lg"
+                              className="absolute inset-0 rounded-md"
                               initial={{ opacity: 0.7, scale: 0.6 }}
                               animate={{ opacity: 0, scale: 2.4 }}
                               exit={{ opacity: 0 }}
@@ -227,11 +241,11 @@ export function HabitGrid() {
                           )}
                         </AnimatePresence>
                         {checked ? (
-                          <Check className="w-3.5 h-3.5"
-                            style={{ color: "var(--blue)", filter: "drop-shadow(0 0 4px rgba(136,192,224,0.7))" }} />
-                        ) : (
+                          <Check className="w-3 h-3"
+                            style={{ color: "var(--blue)", filter: "drop-shadow(0 0 3px rgba(136,192,224,0.8))" }} />
+                        ) : isFuture ? null : (
                           <div className="w-1 h-1 rounded-full"
-                            style={{ background: isPast ? "var(--text-3)" : isToday ? "var(--text-2)" : "var(--text-4)" }} />
+                            style={{ background: isPast ? "rgba(136,192,224,0.2)" : "rgba(136,192,224,0.35)" }} />
                         )}
                       </motion.button>
                     </td>
@@ -260,7 +274,7 @@ export function HabitGrid() {
                     <button onClick={() => setAdding(false)} style={{ color: "var(--text-3)" }}><X className="w-4 h-4" /></button>
                   </div>
                 </td>
-                {weekDates.map((_, i) => <td key={i} />)}
+                {monthDates.map((_, i) => <td key={i} />)}
               </motion.tr>
             )}
           </AnimatePresence>
