@@ -8,14 +8,12 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json();
-  const { habits, weeklyStats, monthlyRate, streak } = body;
+  const { habits, weeklyStats } = body;
 
   const habitSummary = habits
     .map((h: any) => {
       const weekDone = h.checks.filter(Boolean).length;
-      const monthDone = h.monthly.filter(Boolean).length;
-      const monthRate = Math.round((monthDone / Math.max(body.totalDays, 1)) * 100);
-      return `- ${h.icon} ${h.name}: 이번 주 ${weekDone}/7일 완료, 이번 달 달성률 ${monthRate}%`;
+      return `- ${h.icon} ${h.name}: 이번 주 ${weekDone}/7일 완료`;
     })
     .join("\n");
 
@@ -25,8 +23,6 @@ export async function POST(req: Request) {
 ${habitSummary}
 
 [전체 현황]
-- 이번 달 전체 달성률: ${monthlyRate}%
-- 현재 연속 달성 중: ${streak}일
 - 이번 주 평균 달성률: ${weeklyStats}%
 
 아래 JSON 형식으로만 응답해주세요. 다른 텍스트는 절대 포함하지 마세요:

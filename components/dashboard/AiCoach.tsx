@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, TrendingUp, AlertCircle, Lightbulb, RefreshCw, KeyRound } from "lucide-react";
-import { habitRows, overallStats, weeklyProgress } from "@/lib/mock-data";
+import { createClient } from "@/lib/supabase";
 
 type Analysis = {
   strength: string;
@@ -12,7 +12,7 @@ type Analysis = {
   score: number;
 };
 
-type State = "idle" | "loading" | "done" | "error" | "no_key";
+type State = "idle" | "loading" | "done" | "error" | "no_key" | "no_data";
 
 const insightCards = [
   {
@@ -43,6 +43,18 @@ const insightCards = [
     border: "rgba(240,208,144,0.18)",
   },
 ];
+
+function getWeekRange() {
+  const today = new Date();
+  const day = today.getDay();
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - ((day + 6) % 7));
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    return d.toISOString().slice(0, 10);
+  });
+}
 
 function ScoreRing({ score }: { score: number }) {
   const size = 64;
@@ -92,33 +104,62 @@ function LoadingDots() {
 }
 
 export function AiCoach() {
+  const supabase = createClient();
   const [state, setState] = useState<State>("idle");
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
+  const [habitCount, setHabitCount] = useState(0);
 
-  const weekDoneCount = habitRows.reduce((s, h) => s + h.checks.filter(Boolean).length, 0);
-  const weekAvg = Math.round((weekDoneCount / (habitRows.length * 7)) * 100);
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        supabase.from("habits").select("id", { count: "exact", head: true })
+          .eq("user_id", data.user.id)
+          .then(({ count }) => setHabitCount(count ?? 0));
+      }
+    });
+  }, []);
 
   const analyze = async () => {
     setState("loading");
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) { setState("error"); return; }
+
+      const weekDates = getWeekRange();
+
+      // 실제 습관 + 체크 데이터 가져오기
+      const [{ data: habits }, { data: checks }] = await Promise.all([
+        supabase.from("habits").select("*").eq("user_id", user.id).order("created_at"),
+        supabase.from("habit_checks").select("*").eq("user_id", user.id)
+          .in("checked_date", weekDates),
+      ]);
+
+      if (!habits || habits.length === 0) {
+        setState("no_data");
+        return;
+      }
+
+      // 습관별 이번 주 체크 현황 계산
+      const habitRows = habits.map(h => ({
+        icon: h.icon,
+        name: h.name,
+        checks: weekDates.map(d =>
+          checks?.some(c => c.habit_id === h.id && c.checked_date === d) ?? false
+        ),
+      }));
+
+      const totalPossible = habits.length * 7;
+      const totalDone = habitRows.reduce((s, h) => s + h.checks.filter(Boolean).length, 0);
+      const weeklyStats = Math.round((totalDone / totalPossible) * 100);
+
       const res = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          habits: habitRows,
-          weeklyStats: weekAvg,
-          monthlyRate: overallStats.completionRate,
-          streak: overallStats.currentStreak,
-          totalDays: overallStats.totalDays,
-        }),
+        body: JSON.stringify({ habits: habitRows, weeklyStats }),
       });
 
       const data = await res.json();
-
-      if (data.error === "API_KEY_MISSING") {
-        setState("no_key");
-        return;
-      }
+      if (data.error === "API_KEY_MISSING") { setState("no_key"); return; }
       if (data.error) throw new Error(data.error);
 
       setAnalysis(data);
@@ -168,7 +209,10 @@ export function AiCoach() {
             style={{ border: "1px dashed var(--border-1)", borderRadius: 12 }}>
             <Sparkles className="w-6 h-6" style={{ color: "rgba(136,192,224,0.3)" }} />
             <p className="text-xs text-center" style={{ color: "var(--text-3)" }}>
-              분석 시작 버튼을 눌러<br />AI 루틴 코치의 인사이트를 받아보세요
+              {habitCount === 0
+                ? "루틴을 먼저 추가하면\nAI 분석을 받을 수 있어요"
+                : "분석 시작 버튼을 눌러\nAI 루틴 코치의 인사이트를 받아보세요"
+              }
             </p>
           </motion.div>
         )}
@@ -179,7 +223,19 @@ export function AiCoach() {
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="flex flex-col items-center justify-center py-10 gap-4">
             <LoadingDots />
-            <p className="text-xs" style={{ color: "var(--text-3)" }}>루틴 데이터 분석 중...</p>
+            <p className="text-xs" style={{ color: "var(--text-3)" }}>내 루틴 데이터 분석 중...</p>
+          </motion.div>
+        )}
+
+        {/* no_data */}
+        {state === "no_data" && (
+          <motion.div key="no_data"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="py-6 flex flex-col items-center gap-2">
+            <p className="text-xs text-center" style={{ color: "var(--text-3)" }}>
+              루틴을 먼저 추가해주세요!<br />
+              추가하고 체크를 몇 번 하면 AI가 분석해드려요.
+            </p>
           </motion.div>
         )}
 
@@ -194,10 +250,7 @@ export function AiCoach() {
               <p className="text-xs font-medium mb-1" style={{ color: "var(--amber)" }}>API 키가 필요해요</p>
               <p className="text-[11px]" style={{ color: "var(--text-2)" }}>
                 <code className="px-1 rounded" style={{ background: "rgba(255,255,255,0.05)" }}>.env.local</code> 파일에
-                Gemini API 키를 입력해주세요.<br />
-                <span style={{ color: "var(--text-3)" }}>
-                  aistudio.google.com에서 무료로 발급 가능합니다.
-                </span>
+                Gemini API 키를 입력해주세요.
               </p>
             </div>
           </motion.div>
@@ -218,12 +271,11 @@ export function AiCoach() {
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="space-y-3">
 
-            {/* 점수 + 요약 */}
             <div className="flex items-center gap-4 p-3 rounded-xl"
               style={{ background: "rgba(136,192,224,0.04)", border: "1px solid var(--border-2)" }}>
               <ScoreRing score={analysis.score} />
               <div>
-                <p className="label-text mb-1">이번 달 루틴 점수</p>
+                <p className="label-text mb-1">이번 주 루틴 점수</p>
                 <p className="text-lg font-bold tabular-nums"
                   style={{
                     color: analysis.score >= 80 ? "var(--blue)" : analysis.score >= 60 ? "var(--lavender)" : "var(--amber)",
@@ -235,7 +287,6 @@ export function AiCoach() {
               </div>
             </div>
 
-            {/* 인사이트 카드 3개 */}
             {insightCards.map(({ key, icon: Icon, label, labelKo, color, bg, border }, i) => (
               <motion.div key={key}
                 initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }}
