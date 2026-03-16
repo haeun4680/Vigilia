@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip,
   ResponsiveContainer, ReferenceLine, CartesianGrid,
 } from "recharts";
-import { chartDataMap, RANGE_OPTIONS, RangeKey } from "@/lib/mock-data";
 import { TrendingUp, TrendingDown } from "lucide-react";
+import { useHabits, calcDailyRate } from "@/lib/habit-context";
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload?.[0]?.value != null) {
@@ -21,15 +21,28 @@ const CustomTooltip = ({ active, payload, label }: any) => {
   return null;
 };
 
+const DAY_LABELS = ["MON","TUE","WED","THU","FRI","SAT","SUN"];
+
 export function TopChart() {
-  const [range, setRange] = useState<RangeKey>("1M");
-  const data = chartDataMap[range];
+  const { habits, checks, weekDates } = useHabits();
+
+  const data = useMemo(() => {
+    return weekDates.map((dateStr, i) => {
+      const dayDate = new Date(dateStr);
+      const isToday = dayDate.toDateString() === new Date().toDateString();
+      const isFuture = dayDate > new Date() && !isToday;
+      return {
+        label: DAY_LABELS[i],
+        value: isFuture ? null : calcDailyRate(habits, checks, dateStr),
+      };
+    });
+  }, [habits, checks, weekDates]);
 
   const stats = useMemo(() => {
     const valid = data.filter((d) => d.value !== null) as { value: number }[];
-    if (valid.length < 2) return { avg: 0, change: 0, up: true };
+    if (valid.length === 0) return { avg: 0, change: 0, up: true };
     const avg = Math.round(valid.reduce((s, d) => s + d.value, 0) / valid.length);
-    const change = valid[valid.length - 1].value - valid[0].value;
+    const change = valid.length >= 2 ? valid[valid.length - 1].value - valid[0].value : 0;
     return { avg, change, up: change >= 0 };
   }, [data]);
 
@@ -52,29 +65,12 @@ export function TopChart() {
               {stats.up ? "+" : ""}{stats.change}%
             </div>
           </div>
-          <p className="text-xs mt-1" style={{ color: "var(--text-3)" }}>평균 일별 달성률</p>
-        </div>
-
-        {/* 기간 선택 */}
-        <div className="flex items-center gap-px p-1 rounded-xl"
-          style={{ background: "rgba(136,192,224,0.04)", border: "1px solid var(--border-2)" }}>
-          {RANGE_OPTIONS.map((r) => (
-            <button key={r} onClick={() => setRange(r)}
-              className="px-3 py-1.5 rounded-lg text-[10px] font-medium tracking-wider transition-all duration-150"
-              style={{
-                fontFamily: "var(--font-en)",
-                background: range === r ? "rgba(136,192,224,0.12)" : "transparent",
-                color: range === r ? "var(--blue)" : "var(--text-3)",
-                border: range === r ? "1px solid rgba(136,192,224,0.2)" : "1px solid transparent",
-              }}>
-              {r}
-            </button>
-          ))}
+          <p className="text-xs mt-1" style={{ color: "var(--text-3)" }}>이번 주 일별 달성률</p>
         </div>
       </div>
 
       <AnimatePresence mode="wait">
-        <motion.div key={range}
+        <motion.div key="week"
           initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0 }} transition={{ duration: 0.25 }}
           className="h-44">
@@ -88,8 +84,7 @@ export function TopChart() {
               </defs>
               <CartesianGrid vertical={false} stroke="rgba(136,192,224,0.05)" />
               <XAxis dataKey="label" axisLine={false} tickLine={false}
-                tick={{ fill: "var(--text-4)", fontSize: 9, fontFamily: "monospace" }}
-                interval={Math.floor(data.length / 6)} />
+                tick={{ fill: "var(--text-4)", fontSize: 9, fontFamily: "monospace" }} />
               <YAxis domain={[0, 100]} axisLine={false} tickLine={false}
                 tick={{ fill: "var(--text-4)", fontSize: 9 }} />
               <Tooltip content={<CustomTooltip />}

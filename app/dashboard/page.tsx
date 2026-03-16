@@ -11,6 +11,7 @@ import { AiCoach } from "@/components/dashboard/AiCoach";
 import { WeeklyView } from "@/components/weekly/WeeklyView";
 import { HabitGrid } from "@/components/dashboard/HabitGrid";
 import { createClient } from "@/lib/supabase";
+import { HabitProvider } from "@/lib/habit-context";
 
 type Tab = "dashboard" | "weekly";
 
@@ -189,17 +190,19 @@ export default function Home() {
               transition={{ type: "spring", stiffness: 280, damping: 28 }}
               className="space-y-4"
             >
-              <section className="dawn-card p-6"><TopChart /></section>
-              <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4 items-start">
-                <div className="flex flex-col gap-4">
-                  <section className="dawn-card p-6"><MiddleOverview /></section>
-                  <section className="dawn-card p-6"><HabitGrid /></section>
+              <HabitProvider>
+                <section className="dawn-card p-6"><TopChart /></section>
+                <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4 items-start">
+                  <div className="flex flex-col gap-4">
+                    <section className="dawn-card p-6"><MiddleOverview /></section>
+                    <section className="dawn-card p-6"><HabitGrid /></section>
+                  </div>
+                  <div className="flex flex-col gap-4">
+                    <section className="dawn-card p-6"><AiCoach /></section>
+                    <section className="dawn-card p-6"><RightSidebar /></section>
+                  </div>
                 </div>
-                <div className="flex flex-col gap-4">
-                  <section className="dawn-card p-6"><AiCoach /></section>
-                  <section className="dawn-card p-6"><RightSidebar /></section>
-                </div>
-              </div>
+              </HabitProvider>
             </motion.div>
           )}
 

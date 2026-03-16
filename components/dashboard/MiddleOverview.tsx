@@ -1,8 +1,9 @@
 "use client";
 
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from "recharts";
-import { weeklyDetailData } from "@/lib/mock-data";
+import { useHabits, calcDailyRate } from "@/lib/habit-context";
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload?.[0]) {
@@ -27,19 +28,56 @@ function getBarColor(value: number | null, isToday: boolean) {
 }
 
 function getBarGlow(value: number | null, isToday: boolean) {
-  if (isToday)     return "rgba(112,192,255,0.7)";
-  if ((value ?? 0) >= 80) return "rgba(43,143,240,0.5)";
-  if ((value ?? 0) >= 60) return "rgba(43,143,240,0.3)";
+  if (isToday)              return "rgba(112,192,255,0.7)";
+  if ((value ?? 0) >= 80)  return "rgba(43,143,240,0.5)";
+  if ((value ?? 0) >= 60)  return "rgba(43,143,240,0.3)";
   return "none";
 }
 
-function WeekMiniChart({ weekData, weekIdx }: { weekData: typeof weeklyDetailData[0]; weekIdx: number }) {
-  const valid = weekData.days.filter((d) => d.value !== null);
-  const avg = valid.length > 0
-    ? Math.round(valid.reduce((s, d) => s + (d.value ?? 0), 0) / valid.length)
-    : 0;
+const DAY_SHORTS = ["M","T","W","T","F","S","S"];
 
-  const avgColor = avg >= 80 ? "var(--blue)" : avg >= 60 ? "var(--lavender)" : "var(--amber)";
+// 지난 4주 각각의 Mon~Sun 날짜 배열
+function getWeeks() {
+  const today = new Date();
+  const todayMon = new Date(today);
+  todayMon.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+
+  return Array.from({ length: 4 }, (_, wi) => {
+    const mon = new Date(todayMon);
+    mon.setDate(todayMon.getDate() - (3 - wi) * 7);
+    const weekNum = wi + 1;
+    const days = Array.from({ length: 7 }, (_, di) => {
+      const d = new Date(mon);
+      d.setDate(mon.getDate() + di);
+      return {
+        day: DAY_SHORTS[di],
+        dateStr: d.toISOString().slice(0, 10),
+        isToday: d.toDateString() === today.toDateString(),
+        isFuture: d > today && d.toDateString() !== today.toDateString(),
+      };
+    });
+    const label = wi === 3 ? "이번주" : `${4 - wi}주 전`;
+    return { week: label, weekNum, days };
+  });
+}
+
+function WeekMiniChart({ weekData, weekIdx, habits, checks }: {
+  weekData: ReturnType<typeof getWeeks>[0];
+  weekIdx: number;
+  habits: any[];
+  checks: any[];
+}) {
+  const chartData = weekData.days.map(d => ({
+    day: d.day,
+    value: d.isFuture ? null : calcDailyRate(habits, checks, d.dateStr),
+    isToday: d.isToday,
+  }));
+
+  const valid = chartData.filter(d => d.value !== null) as { value: number }[];
+  const avg = valid.length > 0
+    ? Math.round(valid.reduce((s, d) => s + d.value, 0) / valid.length)
+    : 0;
+  const avgColor = avg >= 80 ? "var(--blue)" : avg >= 60 ? "var(--lavender)" : avg > 0 ? "var(--amber)" : "var(--text-4)";
 
   return (
     <motion.div
@@ -50,7 +88,7 @@ function WeekMiniChart({ weekData, weekIdx }: { weekData: typeof weeklyDetailDat
     >
       <div className="flex items-center justify-between mb-2 px-0.5">
         <span className="text-[10px] font-semibold tracking-wide"
-          style={{ color: "var(--blue)", fontFamily: "var(--font-en)" }}>
+          style={{ color: weekIdx === 3 ? "var(--blue)" : "var(--text-3)", fontFamily: "var(--font-en)" }}>
           {weekData.week}
         </span>
         <motion.span
@@ -64,7 +102,7 @@ function WeekMiniChart({ weekData, weekIdx }: { weekData: typeof weeklyDetailDat
 
       <div className="h-28">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={weekData.days} barSize={11} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
+          <BarChart data={chartData} barSize={11} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
             <defs>
               <linearGradient id="barGradientHigh" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="rgba(112,192,255,0.95)" />
@@ -82,19 +120,15 @@ function WeekMiniChart({ weekData, weekIdx }: { weekData: typeof weeklyDetailDat
                 <stop offset="0%" stopColor="rgba(180,225,255,1.0)" />
                 <stop offset="100%" stopColor="rgba(80,160,255,0.7)" />
               </linearGradient>
-              <filter id={`glow-${weekIdx}`} x="-30%" y="-30%" width="160%" height="160%">
-                <feGaussianBlur stdDeviation="2.5" result="blur" />
-                <feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-              </filter>
             </defs>
             <YAxis domain={[0, 100]} hide />
             <XAxis dataKey="day" axisLine={false} tickLine={false}
               tick={{ fill: "var(--text-4)", fontSize: 7, fontFamily: "monospace" }} />
             <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(43,143,240,0.04)", radius: 4 }} />
             <ReferenceLine y={70} stroke="rgba(43,143,240,0.12)" strokeDasharray="3 3" />
-            <Bar dataKey="value" radius={[4, 4, 1, 1]} isAnimationActive={true}
-              animationBegin={weekIdx * 90} animationDuration={700} animationEasing="ease-out">
-              {weekData.days.map((entry, i) => (
+            <Bar dataKey="value" radius={[4, 4, 1, 1]}
+              isAnimationActive animationBegin={weekIdx * 90} animationDuration={700} animationEasing="ease-out">
+              {chartData.map((entry, i) => (
                 <Cell key={i}
                   fill={getBarColor(entry.value, !!entry.isToday)}
                   stroke={entry.isToday ? "rgba(180,225,255,0.6)" : (entry.value ?? 0) >= 80 ? "rgba(112,192,255,0.3)" : "none"}
@@ -109,7 +143,6 @@ function WeekMiniChart({ weekData, weekIdx }: { weekData: typeof weeklyDetailDat
         </ResponsiveContainer>
       </div>
 
-      {/* 하단 달성률 바 */}
       <div className="mt-2 mb-1">
         <div className="h-0.5 rounded-full overflow-hidden" style={{ background: "rgba(43,143,240,0.08)" }}>
           <motion.div className="h-full rounded-full"
@@ -131,10 +164,8 @@ function WeekMiniChart({ weekData, weekIdx }: { weekData: typeof weeklyDetailDat
 }
 
 export function MiddleOverview() {
-  const totalCleared = weeklyDetailData.reduce((s, w) =>
-    s + w.days.filter((d) => (d.value ?? 0) >= 70).length, 0);
-  const totalDays = weeklyDetailData.reduce((s, w) =>
-    s + w.days.filter((d) => d.value !== null).length, 0);
+  const { habits, checks } = useHabits();
+  const weeks = useMemo(() => getWeeks(), []);
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.1 }} className="w-full">
@@ -143,32 +174,22 @@ export function MiddleOverview() {
           <p className="label-text mb-1.5">WEEKLY MISSIONS</p>
           <h2 className="text-sm font-semibold" style={{ color: "var(--text-1)" }}>주차별 달성 현황</h2>
         </div>
-        <div className="flex items-center gap-4">
-          <div className="text-right">
-            <p className="label-text mb-0.5">완료</p>
-            <p className="text-sm font-bold" style={{ color: "var(--blue)" }}>
-              {totalCleared}<span style={{ color: "var(--text-3)" }}>/{totalDays}</span>
-            </p>
-          </div>
-          <div className="flex flex-col gap-1">
-            {[
-              { label: "≥80%", color: "rgba(112,192,255,0.8)" },
-              { label: "≥60%", color: "rgba(96,160,240,0.55)" },
-              { label: "<60%", color: "rgba(60,100,200,0.35)" },
-            ].map((l) => (
-              <div key={l.label} className="flex items-center gap-1.5">
-                <div className="w-2 h-2 rounded-sm" style={{ background: l.color, boxShadow: `0 0 4px ${l.color}` }} />
-                <span className="text-[8px]" style={{ color: "var(--text-3)", fontFamily: "var(--font-en)" }}>
-                  {l.label}
-                </span>
-              </div>
-            ))}
-          </div>
+        <div className="flex flex-col gap-1">
+          {[
+            { label: "≥80%", color: "rgba(112,192,255,0.8)" },
+            { label: "≥60%", color: "rgba(96,160,240,0.55)" },
+            { label: "<60%", color: "rgba(60,100,200,0.35)" },
+          ].map((l) => (
+            <div key={l.label} className="flex items-center gap-1.5">
+              <div className="w-2 h-2 rounded-sm" style={{ background: l.color, boxShadow: `0 0 4px ${l.color}` }} />
+              <span className="text-[8px]" style={{ color: "var(--text-3)", fontFamily: "var(--font-en)" }}>{l.label}</span>
+            </div>
+          ))}
         </div>
       </div>
       <div className="flex gap-3">
-        {weeklyDetailData.map((w, i) => (
-          <WeekMiniChart key={w.week} weekData={w} weekIdx={i} />
+        {weeks.map((w, i) => (
+          <WeekMiniChart key={w.week} weekData={w} weekIdx={i} habits={habits} checks={checks} />
         ))}
       </div>
     </motion.div>
