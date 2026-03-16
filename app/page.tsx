@@ -105,7 +105,7 @@ export default function Landing() {
               Vigilia
             </span>
           </div>
-          <Link href="/dashboard">
+          <Link href="/login">
             <motion.button
               whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium"
@@ -274,7 +274,7 @@ export default function Landing() {
             transition={{ duration: 0.6, delay: 0.45 }}
             className="flex items-center gap-4"
           >
-            <Link href="/dashboard">
+            <Link href="/login">
               <motion.button
                 whileHover={{ scale: 1.05, boxShadow: "0 0 30px rgba(43,143,240,0.4)" }}
                 whileTap={{ scale: 0.97 }}
@@ -446,7 +446,7 @@ export default function Landing() {
               달빛 아래, 조용히 나를 만들어가는 시간
             </p>
           </div>
-          <Link href="/dashboard">
+          <Link href="/login">
             <motion.button
               whileHover={{ scale: 1.05, boxShadow: "0 0 30px rgba(43,143,240,0.45)" }}
               whileTap={{ scale: 0.97 }}

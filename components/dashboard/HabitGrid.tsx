@@ -1,46 +1,110 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, Plus, X } from "lucide-react";
-import { habitRows, weekDates, HabitRow } from "@/lib/mock-data";
+import { Check, Plus, X, Loader2 } from "lucide-react";
+import { createClient, Habit, HabitCheck } from "@/lib/supabase";
+
+function getWeekDates() {
+  const today = new Date();
+  const day = today.getDay(); // 0=일
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - ((day + 6) % 7));
+
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const isToday = d.toDateString() === today.toDateString();
+    const isPast = d < today && !isToday;
+    return {
+      date: d.getDate(),
+      dayShort: ["MON","TUE","WED","THU","FRI","SAT","SUN"][i],
+      isToday,
+      isPast,
+      dateStr: d.toISOString().slice(0, 10), // YYYY-MM-DD
+    };
+  });
+}
+
+const weekDates = getWeekDates();
 
 export function HabitGrid() {
-  const [habits, setHabits] = useState<HabitRow[]>(habitRows);
+  const supabase = createClient();
+  const [habits, setHabits] = useState<Habit[]>([]);
+  const [checks, setChecks] = useState<HabitCheck[]>([]);
+  const [loading, setLoading] = useState(true);
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState("");
   const [newGoal, setNewGoal] = useState("7일");
   const [newIcon, setNewIcon] = useState("⭐");
-  // 리플 추적: key = `${habitId}-${dayIdx}`
   const [ripples, setRipples] = useState<Record<string, number>>({});
+  const [userId, setUserId] = useState<string | null>(null);
 
-  const toggleCheck = useCallback((habitId: number, dayIndex: number) => {
-    setHabits((prev) =>
-      prev.map((h) => {
-        if (h.id !== habitId) return h;
-        const checks = [...h.checks];
-        const willCheck = !checks[dayIndex];
-        checks[dayIndex] = willCheck;
-        // 체크할 때만 리플 발동
-        if (willCheck) {
-          const key = `${habitId}-${dayIndex}`;
-          setRipples((r) => ({ ...r, [key]: Date.now() }));
-          setTimeout(() => setRipples((r) => { const n = { ...r }; delete n[key]; return n; }), 600);
-        }
-        return { ...h, checks };
-      })
-    );
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        setUserId(data.user.id);
+        loadData(data.user.id);
+      }
+    });
   }, []);
 
-  const addHabit = () => {
-    if (!newName.trim()) return;
-    setHabits((prev) => [
-      ...prev,
-      { id: Date.now(), icon: newIcon, name: newName.trim(), goal: newGoal,
-        checks: Array(7).fill(false), monthly: Array(30).fill(false) },
+  const loadData = async (uid: string) => {
+    setLoading(true);
+    const [{ data: habitsData }, { data: checksData }] = await Promise.all([
+      supabase.from("habits").select("*").eq("user_id", uid).order("created_at"),
+      supabase.from("habit_checks").select("*").eq("user_id", uid)
+        .in("checked_date", weekDates.map(d => d.dateStr)),
     ]);
-    setNewName(""); setNewGoal("7일"); setNewIcon("⭐"); setAdding(false);
+    setHabits(habitsData ?? []);
+    setChecks(checksData ?? []);
+    setLoading(false);
   };
+
+  const isChecked = (habitId: string, dateStr: string) =>
+    checks.some(c => c.habit_id === habitId && c.checked_date === dateStr);
+
+  const toggleCheck = useCallback(async (habitId: string, dateStr: string) => {
+    if (!userId) return;
+    const checked = isChecked(habitId, dateStr);
+
+    if (checked) {
+      await supabase.from("habit_checks")
+        .delete()
+        .eq("habit_id", habitId)
+        .eq("checked_date", dateStr);
+      setChecks(prev => prev.filter(c => !(c.habit_id === habitId && c.checked_date === dateStr)));
+    } else {
+      const { data } = await supabase.from("habit_checks")
+        .insert({ habit_id: habitId, user_id: userId, checked_date: dateStr })
+        .select().single();
+      if (data) {
+        setChecks(prev => [...prev, data]);
+        const key = `${habitId}-${dateStr}`;
+        setRipples(r => ({ ...r, [key]: Date.now() }));
+        setTimeout(() => setRipples(r => { const n = { ...r }; delete n[key]; return n; }), 600);
+      }
+    }
+  }, [userId, checks]);
+
+  const addHabit = async () => {
+    if (!newName.trim() || !userId) return;
+    const { data } = await supabase.from("habits")
+      .insert({ user_id: userId, icon: newIcon, name: newName.trim(), goal: newGoal })
+      .select().single();
+    if (data) {
+      setHabits(prev => [...prev, data]);
+      setNewName(""); setNewGoal("7일"); setNewIcon("⭐"); setAdding(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <Loader2 className="w-5 h-5 animate-spin" style={{ color: "var(--blue)" }} />
+      </div>
+    );
+  }
 
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
@@ -79,6 +143,15 @@ export function HabitGrid() {
 
         <tbody>
           <AnimatePresence initial={false}>
+            {habits.length === 0 && !adding && (
+              <tr>
+                <td colSpan={9} className="py-8 text-center">
+                  <p className="text-xs" style={{ color: "var(--text-3)" }}>
+                    아직 루틴이 없어요. 아래 버튼으로 추가해보세요!
+                  </p>
+                </td>
+              </tr>
+            )}
             {habits.map((habit, rowIdx) => (
               <motion.tr key={habit.id}
                 initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
@@ -97,15 +170,14 @@ export function HabitGrid() {
                     {habit.goal}
                   </span>
                 </td>
-                {habit.checks.map((checked, dayIdx) => {
-                  const isToday = weekDates[dayIdx]?.isToday;
-                  const isPast  = weekDates[dayIdx]?.isPast;
-                  const rippleKey = `${habit.id}-${dayIdx}`;
+                {weekDates.map(({ isToday, isPast, dateStr }) => {
+                  const checked = isChecked(habit.id, dateStr);
+                  const rippleKey = `${habit.id}-${dateStr}`;
                   const hasRipple = !!ripples[rippleKey];
                   return (
-                    <td key={dayIdx} className="py-2.5 text-center">
+                    <td key={dateStr} className="py-2.5 text-center">
                       <motion.button
-                        onClick={() => toggleCheck(habit.id, dayIdx)}
+                        onClick={() => toggleCheck(habit.id, dateStr)}
                         className="relative mx-auto flex items-center justify-center w-7 h-7 rounded-lg focus:outline-none"
                         animate={checked ? { scale: [1, 1.3, 0.9, 1] } : { scale: 1 }}
                         transition={{ duration: 0.35, ease: [0.34, 1.56, 0.64, 1] }}
@@ -115,8 +187,6 @@ export function HabitGrid() {
                             isToday ? "1px solid rgba(136,192,224,0.18)" : "1px solid transparent",
                           boxShadow: checked ? "0 0 10px rgba(136,192,224,0.25)" : "none",
                         }}>
-
-                        {/* 리플 */}
                         <AnimatePresence>
                           {hasRipple && (
                             <motion.span key={ripples[rippleKey]}
@@ -129,7 +199,6 @@ export function HabitGrid() {
                             />
                           )}
                         </AnimatePresence>
-
                         {checked ? (
                           <Check className="w-3.5 h-3.5"
                             style={{ color: "var(--blue)", filter: "drop-shadow(0 0 4px rgba(136,192,224,0.7))" }} />

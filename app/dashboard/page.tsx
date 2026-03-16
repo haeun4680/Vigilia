@@ -1,14 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { LayoutDashboard, CalendarDays } from "lucide-react";
+import { LayoutDashboard, CalendarDays, LogOut } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { TopChart } from "@/components/dashboard/TopChart";
 import { MiddleOverview } from "@/components/dashboard/MiddleOverview";
 import { MonthlyGrid } from "@/components/dashboard/MonthlyGrid";
 import { RightSidebar } from "@/components/dashboard/RightSidebar";
 import { AiCoach } from "@/components/dashboard/AiCoach";
 import { WeeklyView } from "@/components/weekly/WeeklyView";
+import { HabitGrid } from "@/components/dashboard/HabitGrid";
+import { createClient } from "@/lib/supabase";
 
 type Tab = "dashboard" | "weekly";
 
@@ -21,7 +24,25 @@ function getGreeting() {
 }
 
 export default function Home() {
+  const router = useRouter();
   const [tab, setTab] = useState<Tab>("dashboard");
+  const [userEmail, setUserEmail] = useState<string | null>(null);
+  const supabase = createClient();
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (!data.user) {
+        router.push("/login");
+      } else {
+        setUserEmail(data.user.email ?? null);
+      }
+    });
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push("/");
+  };
   const now = new Date();
   const dateStr = now.toLocaleDateString("ko-KR", {
     year: "numeric", month: "long", day: "numeric", weekday: "long",
@@ -135,20 +156,25 @@ export default function Home() {
               <p className="text-sm font-bold" style={{ color: "var(--blue)" }}>74%</p>
             </div>
             <div className="w-px h-8 hidden sm:block" style={{ background: "var(--border-2)" }} />
-            {/* 미니 EXP 바 */}
-            <div>
-              <p className="label-text mb-1.5">월간 달성률</p>
-              <div className="flex items-center gap-2">
-                <div className="w-24 h-1.5 rounded-full overflow-hidden"
-                  style={{ background: "rgba(136,192,224,0.08)" }}>
-                  <motion.div className="h-full rounded-full"
-                    style={{ background: "var(--blue)", boxShadow: "0 0 6px rgba(136,192,224,0.4)" }}
-                    initial={{ width: 0 }}
-                    animate={{ width: "74%" }}
-                    transition={{ duration: 1.2, delay: 0.4, ease: "easeOut" }} />
-                </div>
-                <span className="text-xs font-medium" style={{ color: "var(--blue)" }}>74%</span>
-              </div>
+            {/* 유저 + 로그아웃 */}
+            <div className="flex items-center gap-3">
+              {userEmail && (
+                <p className="text-xs hidden md:block truncate max-w-[140px]" style={{ color: "var(--text-3)" }}>
+                  {userEmail}
+                </p>
+              )}
+              <motion.button
+                onClick={handleLogout}
+                whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs"
+                style={{
+                  background: "rgba(136,192,224,0.05)",
+                  border: "1px solid var(--border-2)",
+                  color: "var(--text-3)",
+                }}>
+                <LogOut className="w-3 h-3" />
+                로그아웃
+              </motion.button>
             </div>
           </div>
         </motion.header>
