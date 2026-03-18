@@ -11,7 +11,7 @@ import { WeeklyView } from "@/components/weekly/WeeklyView";
 import { MonthlyView } from "@/components/monthly/MonthlyView";
 import { HabitGrid } from "@/components/dashboard/HabitGrid";
 import { createClient } from "@/lib/supabase";
-import { HabitProvider, useHabits } from "@/lib/habit-context";
+import { HabitProvider, useHabits, toLocalDateStr } from "@/lib/habit-context";
 
 type Tab = "dashboard" | "weekly" | "monthly";
 
@@ -29,13 +29,13 @@ function HeaderStats() {
 
   const { currentStreak, completionRate } = useMemo(() => {
     const now = new Date();
-    const today = now.toISOString().slice(0, 10);
+    const today = toLocalDateStr(now);
     const checkedDates = new Set(checks.map(c => c.checked_date));
 
     let currentStreak = 0;
     const d = new Date(now);
     while (true) {
-      const ds = d.toISOString().slice(0, 10);
+      const ds = toLocalDateStr(d);
       if (ds > today) { d.setDate(d.getDate() - 1); continue; }
       if (!checkedDates.has(ds)) break;
       currentStreak++;

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, X, Minus } from "lucide-react";
-import { useHabits } from "@/lib/habit-context";
+import { useHabits, toLocalDateStr } from "@/lib/habit-context";
 import type { Habit, HabitCheck } from "@/lib/supabase";
 import { AiCoach } from "@/components/dashboard/AiCoach";
 
@@ -178,7 +178,7 @@ export function WeeklyView() {
   const { habits, checks, weekDates, loading } = useHabits();
 
   const dayInfos: DayInfo[] = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = toLocalDateStr(new Date());
     return weekDates.map((dateStr) => {
       const d = new Date(dateStr);
       const isToday = dateStr === today;

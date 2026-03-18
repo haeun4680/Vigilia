@@ -7,7 +7,7 @@ import {
   ResponsiveContainer, ReferenceLine, CartesianGrid,
 } from "recharts";
 import { TrendingUp, TrendingDown } from "lucide-react";
-import { useHabits, calcDailyRate } from "@/lib/habit-context";
+import { useHabits, calcDailyRate, toLocalDateStr } from "@/lib/habit-context";
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload?.[0]?.value != null) {
@@ -36,7 +36,7 @@ function buildChartData(habits: any[], checks: any[], days: number) {
   return Array.from({ length: days }, (_, i) => {
     const d = new Date(today);
     d.setDate(today.getDate() - (days - 1) + i);
-    const dateStr = d.toISOString().slice(0, 10);
+    const dateStr = toLocalDateStr(d);
     const isFuture = d > today;
 
     // 날짜 라벨: 7일은 요일, 나머지는 날짜

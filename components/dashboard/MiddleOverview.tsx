@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from "recharts";
-import { useHabits, calcDailyRate } from "@/lib/habit-context";
+import { useHabits, calcDailyRate, toLocalDateStr } from "@/lib/habit-context";
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload?.[0]) {
@@ -51,7 +51,7 @@ function getWeeks() {
       d.setDate(mon.getDate() + di);
       return {
         day: DAY_SHORTS[di],
-        dateStr: d.toISOString().slice(0, 10),
+        dateStr: toLocalDateStr(d),
         isToday: d.toDateString() === today.toDateString(),
         isFuture: d > today && d.toDateString() !== today.toDateString(),
       };

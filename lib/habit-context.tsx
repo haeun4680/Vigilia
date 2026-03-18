@@ -21,6 +21,11 @@ export function useHabits() {
   return ctx;
 }
 
+// 로컬 타임존 기준 날짜 문자열 (UTC 변환 없이)
+export function toLocalDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 function getWeekDates() {
   const today = new Date();
   const monday = new Date(today);
@@ -28,7 +33,7 @@ function getWeekDates() {
   return Array.from({ length: 7 }, (_, i) => {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
-    return d.toISOString().slice(0, 10);
+    return toLocalDateStr(d);
   });
 }
 
@@ -38,7 +43,7 @@ function getYearDates() {
   return Array.from({ length: 365 }, (_, i) => {
     const d = new Date(today);
     d.setDate(today.getDate() - 364 + i);
-    return d.toISOString().slice(0, 10);
+    return toLocalDateStr(d);
   });
 }
 

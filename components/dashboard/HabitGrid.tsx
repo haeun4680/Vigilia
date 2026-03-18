@@ -4,7 +4,7 @@ import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Plus, X, Loader2, Pencil, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase";
-import { useHabits } from "@/lib/habit-context";
+import { useHabits, toLocalDateStr } from "@/lib/habit-context";
 import type { Habit } from "@/lib/supabase";
 
 const DAY_SHORT = ["일","월","화","수","목","금","토"];
@@ -26,7 +26,7 @@ function getMonthDates() {
       isFuture,
       isSun: d.getDay() === 0,
       isSat: d.getDay() === 6,
-      dateStr: d.toISOString().slice(0, 10),
+      dateStr: toLocalDateStr(d),
     };
   });
 }

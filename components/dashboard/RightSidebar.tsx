@@ -4,7 +4,7 @@ import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { Flame, TrendingUp, Calendar, Star } from "lucide-react";
-import { useHabits } from "@/lib/habit-context";
+import { useHabits, toLocalDateStr } from "@/lib/habit-context";
 
 const StatRow = ({ icon: Icon, label, value, delay }: {
   icon: any; label: string; value: string | number; delay: number;
@@ -28,7 +28,7 @@ export function RightSidebar() {
 
   const stats = useMemo(() => {
     const now = new Date();
-    const today = now.toISOString().slice(0, 10);
+    const today = toLocalDateStr(now);
     const monthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
     const daysThisMonth = now.getDate();
 
@@ -60,7 +60,7 @@ export function RightSidebar() {
     let currentStreak = 0;
     const d = new Date(now);
     while (true) {
-      const ds = d.toISOString().slice(0, 10);
+      const ds = toLocalDateStr(d);
       if (ds > today) { d.setDate(d.getDate() - 1); continue; }
       if (!checkedDates.has(ds)) break;
       currentStreak++;
@@ -73,7 +73,7 @@ export function RightSidebar() {
     for (let i = 0; i < 365; i++) {
       const d2 = new Date(now);
       d2.setDate(now.getDate() - 364 + i);
-      if (checkedDates.has(d2.toISOString().slice(0, 10))) {
+      if (checkedDates.has(toLocalDateStr(d2))) {
         streak++;
         longestStreak = Math.max(longestStreak, streak);
       } else {

@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, ArrowLeft, Check, X, Sparkles, RefreshCw } from "lucide-react";
-import { useHabits } from "@/lib/habit-context";
+import { useHabits, toLocalDateStr } from "@/lib/habit-context";
 import type { Habit, HabitCheck } from "@/lib/supabase";
 
 // ─── AI 코치 ─────────────────────────────────────────────
@@ -20,7 +20,7 @@ function MonthlyAiCoach({ habits, checks, mode, year, month }: {
   const analyze = async () => {
     setLoading(true);
     setError(null);
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const todayStr = toLocalDateStr(new Date());
 
     let startStr: string;
     let endStr: string;
@@ -355,7 +355,7 @@ function MonthDetail({ year, month, habits, checks, todayStr, onBack }: {
     while (current <= lastDay || current.getDay() !== 0) {
       const week: DayInfo[] = [];
       for (let i = 0; i < 7; i++) {
-        const dateStr = current.toISOString().slice(0, 10);
+        const dateStr = toLocalDateStr(current);
         week.push({
           dateStr,
           dayShort: DAY_SHORT[current.getDay()],

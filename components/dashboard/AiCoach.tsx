@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, RefreshCw } from "lucide-react";
-import { useHabits } from "@/lib/habit-context";
+import { useHabits, toLocalDateStr } from "@/lib/habit-context";
 
 type CoachResult = {
   strength: string;
@@ -29,7 +29,7 @@ export function AiCoach() {
     const weekDates = Array.from({ length: 7 }, (_, i) => {
       const d = new Date(monday);
       d.setDate(monday.getDate() + i);
-      return d.toISOString().slice(0, 10);
+      return toLocalDateStr(d);
     });
 
     const habitsPayload = habits.map((h) => ({
