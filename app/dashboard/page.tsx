@@ -112,7 +112,7 @@ export default function Home() {
   });
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--bg)" }}>
+    <div className="min-h-screen overflow-x-hidden" style={{ background: "var(--bg)" }}>
       {/* 달빛 앰비언트 */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
         <div className="absolute top-[-8%] right-[18%] w-[500px] h-[500px] rounded-full blur-[130px]"
