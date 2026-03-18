@@ -94,7 +94,7 @@ export function RightSidebar() {
   return (
     <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.4, delay: 0.15 }}
-      className="flex flex-col gap-5">
+      className="flex flex-col gap-5 h-full">
       {/* 헤더 */}
       <div>
         <p className="label-text mb-1.5">OVERALL EXP</p>

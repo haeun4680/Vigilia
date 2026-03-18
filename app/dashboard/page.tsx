@@ -258,13 +258,13 @@ export default function Home() {
                 className="space-y-4"
               >
                 <section className="dawn-card p-4 sm:p-6"><TopChart /></section>
-                <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4 items-start">
+                <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4 items-stretch">
                   <div className="flex flex-col gap-4">
                     <section className="dawn-card p-4 sm:p-6"><MiddleOverview /></section>
                     <section className="dawn-card p-4 sm:p-6"><HabitGrid /></section>
                   </div>
-                  <div className="flex flex-col gap-4">
-                    <section className="dawn-card p-4 sm:p-6"><RightSidebar /></section>
+                  <div className="flex flex-col">
+                    <section className="dawn-card p-4 sm:p-6 h-full"><RightSidebar /></section>
                   </div>
                 </div>
               </motion.div>
