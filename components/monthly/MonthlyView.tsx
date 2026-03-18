@@ -2,9 +2,159 @@
 
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight, ArrowLeft, Check, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, ArrowLeft, Check, X, Sparkles, RefreshCw } from "lucide-react";
 import { useHabits } from "@/lib/habit-context";
 import type { Habit, HabitCheck } from "@/lib/supabase";
+
+// ─── AI 코치 ─────────────────────────────────────────────
+type CoachResult = { strength: string; improve: string; tip: string; score: number };
+
+function MonthlyAiCoach({ habits, checks, mode, year, month }: {
+  habits: Habit[]; checks: HabitCheck[];
+  mode: "year" | "month"; year: number; month?: number;
+}) {
+  const [result, setResult] = useState<CoachResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const analyze = async () => {
+    setLoading(true);
+    setError(null);
+    const todayStr = new Date().toISOString().slice(0, 10);
+
+    let startStr: string;
+    let endStr: string;
+    let period: string;
+
+    if (mode === "year") {
+      startStr = `${year}-01-01`;
+      endStr = todayStr;
+      const endMonth = new Date().getMonth() + 1;
+      period = `${year}년 1월~${endMonth}월`;
+    } else {
+      const m = month!;
+      startStr = `${year}-${String(m + 1).padStart(2, "0")}-01`;
+      const lastDay = new Date(year, m + 1, 0).getDate();
+      endStr = `${year}-${String(m + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+      if (endStr > todayStr) endStr = todayStr;
+      period = `${year}년 ${m + 1}월`;
+    }
+
+    // 기간 내 날짜 수
+    const start = new Date(startStr);
+    const end = new Date(endStr);
+    const totalDays = Math.max(1, Math.round((end.getTime() - start.getTime()) / 86400000) + 1);
+
+    const habitsPayload = habits.map(h => {
+      const completedDays = checks.filter(c =>
+        c.habit_id === h.id && c.checked_date >= startStr && c.checked_date <= endStr
+      ).length;
+      const pct = Math.round((completedDays / totalDays) * 100);
+      return { icon: h.icon ?? "✅", name: h.name, completedDays, totalDays, pct };
+    });
+
+    const totalDone = habitsPayload.reduce((s, h) => s + h.completedDays, 0);
+    const avgPct = habits.length === 0 ? 0 : Math.round((totalDone / (habits.length * totalDays)) * 100);
+
+    const isInTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+    const analyzeUrl = isInTauri
+      ? "https://habit-tracker-nine-sigma.vercel.app/api/analyze-monthly"
+      : "/api/analyze-monthly";
+
+    try {
+      const res = await fetch(analyzeUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ habits: habitsPayload, avgPct, period, mode }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        setError(data.error === "API_KEY_MISSING" ? "AI 기능이 아직 설정되지 않았어요." : data.error);
+      } else {
+        setResult(data);
+      }
+    } catch {
+      setError("분석 중 오류가 발생했어요.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const labelText = mode === "year" ? `${year}년 올해 전체 분석` : `${year}년 ${month! + 1}월 분석`;
+  const scoreLabel = mode === "year" ? "올해 루틴 점수" : `${month! + 1}월 루틴 점수`;
+
+  return (
+    <div className="mt-4 p-4 rounded-xl space-y-3"
+      style={{ background: "rgba(136,192,224,0.02)", border: "1px solid var(--border-2)" }}>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-4 h-4" style={{ color: "var(--blue)" }} />
+          <span className="text-sm font-semibold" style={{ color: "var(--text-1)" }}>AI 루틴 코치</span>
+          <span className="text-[10px] px-2 py-0.5 rounded-full"
+            style={{ background: "rgba(136,192,224,0.08)", color: "var(--blue-dim)", border: "1px solid rgba(136,192,224,0.15)" }}>
+            {labelText}
+          </span>
+        </div>
+        <motion.button onClick={analyze} disabled={loading || habits.length === 0}
+          whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
+          style={{
+            background: "rgba(136,192,224,0.1)", border: "1px solid rgba(136,192,224,0.25)",
+            color: "var(--blue)", opacity: (loading || habits.length === 0) ? 0.5 : 1,
+          }}>
+          <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} />
+          {loading ? "분석 중..." : result ? "재분석" : "분석하기"}
+        </motion.button>
+      </div>
+
+      <AnimatePresence mode="wait">
+        {loading && (
+          <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="py-6 flex flex-col items-center gap-2">
+            <div className="w-6 h-6 rounded-full border-2 animate-spin"
+              style={{ borderColor: "var(--blue)", borderTopColor: "transparent" }} />
+            <p className="text-xs" style={{ color: "var(--text-3)" }}>루틴을 분석하는 중...</p>
+          </motion.div>
+        )}
+        {error && !loading && (
+          <motion.div key="error" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            className="p-3 rounded-lg text-xs"
+            style={{ background: "rgba(248,113,113,0.08)", color: "#f87171", border: "1px solid rgba(248,113,113,0.2)" }}>
+            {error}
+          </motion.div>
+        )}
+        {result && !loading && (
+          <motion.div key="result" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            className="space-y-2.5">
+            <div className="flex items-center justify-between p-3 rounded-xl"
+              style={{ background: "rgba(136,192,224,0.06)", border: "1px solid rgba(136,192,224,0.12)" }}>
+              <span className="text-xs font-medium" style={{ color: "var(--text-2)" }}>{scoreLabel}</span>
+              <span className="text-lg font-bold" style={{ color: "var(--blue)" }}>{result.score}점</span>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[11px] font-semibold" style={{ color: "var(--blue-dim)" }}>✨ 잘하고 있어요</p>
+              <p className="text-xs leading-relaxed" style={{ color: "var(--text-2)" }}>{result.strength}</p>
+            </div>
+            <div className="space-y-1">
+              <p className="text-[11px] font-semibold" style={{ color: "var(--amber)" }}>💡 이렇게 해보세요</p>
+              <p className="text-xs leading-relaxed" style={{ color: "var(--text-2)" }}>{result.improve}</p>
+            </div>
+            <div className="p-2.5 rounded-lg space-y-1"
+              style={{ background: "rgba(136,192,224,0.04)", border: "1px solid rgba(136,192,224,0.1)" }}>
+              <p className="text-[11px] font-semibold" style={{ color: "var(--text-3)" }}>앞으로의 팁</p>
+              <p className="text-xs leading-relaxed" style={{ color: "var(--text-2)" }}>{result.tip}</p>
+            </div>
+          </motion.div>
+        )}
+        {!result && !loading && !error && (
+          <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-3 text-center">
+            <p className="text-xs" style={{ color: "var(--text-4)" }}>분석하기 버튼을 눌러 AI 코칭을 받아보세요</p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 const DAY_SHORT = ["일","월","화","수","목","금","토"];
 const MONTH_NAMES = ["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
@@ -344,6 +494,9 @@ function MonthDetail({ year, month, habits, checks, todayStr, onBack }: {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* 월별 AI 코치 */}
+      <MonthlyAiCoach habits={habits} checks={checks} mode="month" year={year} month={month} />
     </motion.div>
   );
 }
@@ -439,6 +592,9 @@ export function MonthlyView() {
       <p className="text-[10px] text-center mt-4" style={{ color: "var(--text-4)" }}>
         월을 클릭하면 상세 기록을 볼 수 있어요
       </p>
+
+      {/* 연간 AI 코치 */}
+      <MonthlyAiCoach habits={habits} checks={checks} mode="year" year={viewYear} />
     </motion.div>
   );
 }
