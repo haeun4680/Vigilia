@@ -17,6 +17,7 @@ export type Habit = {
   name: string;
   goal: string;
   created_at: string;
+  order: number;
 };
 
 export type HabitCheck = {

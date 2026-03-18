@@ -11,6 +11,7 @@ type HabitContextType = {
   weekDates: string[];
   refresh: () => Promise<void>;
   toggleCheck: (habitId: string, dateStr: string) => Promise<void>;
+  reorderHabits: (newOrder: Habit[]) => Promise<void>;
 };
 
 const HabitContext = createContext<HabitContextType | null>(null);
@@ -59,7 +60,7 @@ export function HabitProvider({ children }: { children: ReactNode }) {
 
   const load = useCallback(async (uid: string) => {
     const [{ data: h }, { data: c }] = await Promise.all([
-      supabase.from("habits").select("*").eq("user_id", uid).order("created_at"),
+      supabase.from("habits").select("*").eq("user_id", uid).order("order").order("created_at"),
       supabase.from("habit_checks").select("*").eq("user_id", uid)
         .gte("checked_date", yearDates[0])
         .lte("checked_date", yearDates[yearDates.length - 1]),
@@ -83,6 +84,17 @@ export function HabitProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     if (userId) await load(userId);
   }, [userId, load]);
+
+  const reorderHabits = useCallback(async (newOrder: Habit[]) => {
+    // 낙관적 업데이트
+    setHabits(newOrder);
+    // Supabase에 순서 저장
+    await Promise.all(
+      newOrder.map((h, i) =>
+        supabase.from("habits").update({ order: i }).eq("id", h.id)
+      )
+    );
+  }, [supabase]);
 
   const toggleCheck = useCallback(async (habitId: string, dateStr: string) => {
     if (!userId) return;
@@ -109,7 +121,7 @@ export function HabitProvider({ children }: { children: ReactNode }) {
   }, [userId, checks]);
 
   return (
-    <HabitContext.Provider value={{ habits, checks, userId, loading, weekDates, refresh, toggleCheck }}>
+    <HabitContext.Provider value={{ habits, checks, userId, loading, weekDates, refresh, toggleCheck, reorderHabits }}>
       {children}
     </HabitContext.Provider>
   );

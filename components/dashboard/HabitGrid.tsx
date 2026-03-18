@@ -2,10 +2,17 @@
 
 import { useState, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Check, Plus, X, Loader2, Pencil, Trash2 } from "lucide-react";
+import { Check, Plus, X, Loader2, Pencil, Trash2, GripVertical } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { useHabits, toLocalDateStr } from "@/lib/habit-context";
 import type { Habit } from "@/lib/supabase";
+import {
+  DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext, verticalListSortingStrategy, useSortable, arrayMove,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 const DAY_SHORT = ["일","월","화","수","목","금","토"];
 
@@ -34,9 +41,146 @@ function getMonthDates() {
 const monthDates = getMonthDates();
 const MONTH_LABEL = new Date().toLocaleDateString("ko-KR", { year: "numeric", month: "long" });
 
+function SortableRow({ habit, rowIdx, monthDates, checks, editingId, editIcon, editName, hoverRow, ripples,
+  setHoverRow, setEditIcon, setEditName, setEditingId, onSaveEdit, onStartEdit, onDelete, onToggle, isChecked }: any) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: habit.id });
+
+  return (
+    <motion.tr
+      ref={setNodeRef}
+      initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, x: -16 }}
+      transition={{ duration: 0.25, delay: rowIdx * 0.04 }}
+      onMouseEnter={() => setHoverRow(habit.id)}
+      onMouseLeave={() => setHoverRow(null)}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+        background: isDragging ? "rgba(136,192,224,0.05)" : "transparent",
+        zIndex: isDragging ? 10 : "auto",
+      }}>
+
+      {/* 이름 셀 */}
+      <td className="py-2 pr-2">
+        {editingId === habit.id ? (
+          <div className="flex items-center gap-1.5">
+            <input value={editIcon} onChange={(e: any) => setEditIcon(e.target.value)}
+              className="w-7 text-center bg-transparent rounded text-base focus:outline-none"
+              style={{ border: "1px solid var(--border-1)" }} maxLength={2} autoFocus />
+            <input value={editName} onChange={(e: any) => setEditName(e.target.value)}
+              onKeyDown={(e: any) => e.key === "Enter" && onSaveEdit()}
+              className="flex-1 bg-transparent text-sm focus:outline-none py-0.5"
+              style={{ borderBottom: "1px solid var(--border-1)", color: "var(--text-1)" }} />
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 min-w-0">
+            {/* 드래그 핸들 */}
+            <button {...attributes} {...listeners}
+              className="flex-shrink-0 cursor-grab active:cursor-grabbing touch-none"
+              style={{ color: hoverRow === habit.id ? "var(--text-3)" : "transparent" }}>
+              <GripVertical className="w-3 h-3" />
+            </button>
+            <span className="text-base leading-none flex-shrink-0">{habit.icon}</span>
+            <span className="text-sm font-medium truncate" style={{ color: "var(--text-1)" }}>{habit.name}</span>
+            <AnimatePresence>
+              {hoverRow === habit.id && (
+                <motion.div
+                  initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -4 }} transition={{ duration: 0.15 }}
+                  className="flex items-center gap-1 ml-auto flex-shrink-0">
+                  <motion.button onClick={() => onStartEdit(habit)}
+                    whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}
+                    title="수정" style={{ color: "var(--blue)" }}>
+                    <Pencil className="w-3 h-3" />
+                  </motion.button>
+                  <motion.button onClick={() => onDelete(habit.id)}
+                    whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}
+                    title="삭제" style={{ color: "#c87070" }}>
+                    <Trash2 className="w-3 h-3" />
+                  </motion.button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+      </td>
+
+      {/* 편집 모드 저장/취소 */}
+      {editingId === habit.id && (
+        <td className="py-2 pr-4">
+          <div className="flex items-center gap-1.5">
+            <motion.button onClick={onSaveEdit} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+              style={{ color: "var(--blue)" }}>
+              <Check className="w-3.5 h-3.5" />
+            </motion.button>
+            <motion.button onClick={() => setEditingId(null)} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+              style={{ color: "var(--text-3)" }}>
+              <X className="w-3.5 h-3.5" />
+            </motion.button>
+          </div>
+        </td>
+      )}
+
+      {/* 체크 셀 */}
+      {monthDates.map(({ isToday, isPast, isFuture, dateStr }: any) => {
+        const checked = isChecked(habit.id, dateStr);
+        const rippleKey = `${habit.id}-${dateStr}`;
+        return (
+          <td key={dateStr} className="py-1.5 text-center">
+            <motion.button
+              onClick={() => !isFuture && onToggle(habit.id, dateStr)}
+              disabled={isFuture}
+              className="relative mx-auto flex items-center justify-center rounded-md focus:outline-none"
+              animate={checked ? { scale: [1, 1.25, 0.92, 1] } : { scale: 1 }}
+              transition={{ duration: 0.3, ease: [0.34, 1.56, 0.64, 1] }}
+              style={{
+                width: 22, height: 22,
+                background: checked ? "rgba(136,192,224,0.16)" : isToday ? "rgba(136,192,224,0.05)" : "transparent",
+                border: checked ? "1px solid rgba(136,192,224,0.45)" : isToday ? "1px solid rgba(136,192,224,0.2)" : "1px solid transparent",
+                boxShadow: checked ? "0 0 8px rgba(136,192,224,0.3)" : "none",
+                cursor: isFuture ? "default" : "pointer",
+                opacity: isFuture ? 0.25 : 1,
+              }}>
+              <AnimatePresence>
+                {ripples[rippleKey] && (
+                  <motion.span key={ripples[rippleKey]}
+                    className="absolute inset-0 rounded-md"
+                    initial={{ opacity: 0.7, scale: 0.6 }}
+                    animate={{ opacity: 0, scale: 2.4 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.55, ease: "easeOut" }}
+                    style={{ border: "1.5px solid rgba(136,192,224,0.6)", pointerEvents: "none" }}
+                  />
+                )}
+              </AnimatePresence>
+              {checked ? (
+                <Check className="w-3 h-3" style={{ color: "var(--blue)", filter: "drop-shadow(0 0 3px rgba(136,192,224,0.8))" }} />
+              ) : isFuture ? null : (
+                <div className="w-1 h-1 rounded-full"
+                  style={{ background: isPast ? "rgba(136,192,224,0.2)" : "rgba(136,192,224,0.35)" }} />
+              )}
+            </motion.button>
+          </td>
+        );
+      })}
+    </motion.tr>
+  );
+}
+
 export function HabitGrid() {
   const supabase = createClient();
-  const { habits, checks, userId, loading, toggleCheck, refresh } = useHabits();
+  const { habits, checks, userId, loading, toggleCheck, refresh, reorderHabits } = useHabits();
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const handleDragEnd = useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIdx = habits.findIndex(h => h.id === active.id);
+    const newIdx = habits.findIndex(h => h.id === over.id);
+    reorderHabits(arrayMove(habits, oldIdx, newIdx));
+  }, [habits, reorderHabits]);
 
   // 추가
   const [adding, setAdding] = useState(false);
@@ -132,6 +276,8 @@ export function HabitGrid() {
           </tr>
         </thead>
 
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={habits.map(h => h.id)} strategy={verticalListSortingStrategy}>
         <tbody>
           <AnimatePresence initial={false}>
             {habits.length === 0 && !adding && (
@@ -145,113 +291,27 @@ export function HabitGrid() {
             )}
 
             {habits.map((habit, rowIdx) => (
-              <motion.tr key={habit.id}
-                initial={{ opacity: 0, y: -6 }} animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, x: -16 }}
-                transition={{ duration: 0.25, delay: rowIdx * 0.04 }}
-                onMouseEnter={() => setHoverRow(habit.id)}
-                onMouseLeave={() => setHoverRow(null)}>
-
-                {/* 이름 셀 */}
-                <td className="py-2 pr-2">
-                  {editingId === habit.id ? (
-                    <div className="flex items-center gap-1.5">
-                      <input value={editIcon} onChange={e => setEditIcon(e.target.value)}
-                        className="w-7 text-center bg-transparent rounded text-base focus:outline-none"
-                        style={{ border: "1px solid var(--border-1)" }} maxLength={2} autoFocus />
-                      <input value={editName} onChange={e => setEditName(e.target.value)}
-                        onKeyDown={e => e.key === "Enter" && saveEdit()}
-                        className="flex-1 bg-transparent text-sm focus:outline-none py-0.5"
-                        style={{ borderBottom: "1px solid var(--border-1)", color: "var(--text-1)" }} />
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-base leading-none flex-shrink-0">{habit.icon}</span>
-                      <span className="text-sm font-medium truncate" style={{ color: "var(--text-1)" }}>{habit.name}</span>
-                      <AnimatePresence>
-                        {hoverRow === habit.id && (
-                          <motion.div
-                            initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }}
-                            exit={{ opacity: 0, x: -4 }} transition={{ duration: 0.15 }}
-                            className="flex items-center gap-1 ml-auto flex-shrink-0">
-                            <motion.button onClick={() => startEdit(habit)}
-                              whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}
-                              title="수정" style={{ color: "var(--blue)" }}>
-                              <Pencil className="w-3 h-3" />
-                            </motion.button>
-                            <motion.button onClick={() => deleteHabit(habit.id)}
-                              whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}
-                              title="삭제" style={{ color: "#c87070" }}>
-                              <Trash2 className="w-3 h-3" />
-                            </motion.button>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </div>
-                  )}
-                </td>
-
-                {/* 편집 모드 저장/취소 */}
-                {editingId === habit.id && (
-                  <td className="py-2 pr-4">
-                    <div className="flex items-center gap-1.5">
-                      <motion.button onClick={saveEdit} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                        style={{ color: "var(--blue)" }}>
-                        <Check className="w-3.5 h-3.5" />
-                      </motion.button>
-                      <motion.button onClick={() => setEditingId(null)} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                        style={{ color: "var(--text-3)" }}>
-                        <X className="w-3.5 h-3.5" />
-                      </motion.button>
-                    </div>
-                  </td>
-                )}
-
-                {/* 체크 셀 7개 */}
-                {monthDates.map(({ isToday, isPast, isFuture, dateStr }) => {
-                  const checked = isChecked(habit.id, dateStr);
-                  const rippleKey = `${habit.id}-${dateStr}`;
-                  return (
-                    <td key={dateStr} className="py-1.5 text-center">
-                      <motion.button
-                        onClick={() => !isFuture && handleToggle(habit.id, dateStr)}
-                        disabled={isFuture}
-                        className="relative mx-auto flex items-center justify-center rounded-md focus:outline-none"
-                        animate={checked ? { scale: [1, 1.25, 0.92, 1] } : { scale: 1 }}
-                        transition={{ duration: 0.3, ease: [0.34, 1.56, 0.64, 1] }}
-                        style={{
-                          width: 22, height: 22,
-                          background: checked ? "rgba(136,192,224,0.16)" : isToday ? "rgba(136,192,224,0.05)" : "transparent",
-                          border: checked ? "1px solid rgba(136,192,224,0.45)" :
-                            isToday ? "1px solid rgba(136,192,224,0.2)" : "1px solid transparent",
-                          boxShadow: checked ? "0 0 8px rgba(136,192,224,0.3)" : "none",
-                          cursor: isFuture ? "default" : "pointer",
-                          opacity: isFuture ? 0.25 : 1,
-                        }}>
-                        <AnimatePresence>
-                          {ripples[rippleKey] && (
-                            <motion.span key={ripples[rippleKey]}
-                              className="absolute inset-0 rounded-md"
-                              initial={{ opacity: 0.7, scale: 0.6 }}
-                              animate={{ opacity: 0, scale: 2.4 }}
-                              exit={{ opacity: 0 }}
-                              transition={{ duration: 0.55, ease: "easeOut" }}
-                              style={{ border: "1.5px solid rgba(136,192,224,0.6)", pointerEvents: "none" }}
-                            />
-                          )}
-                        </AnimatePresence>
-                        {checked ? (
-                          <Check className="w-3 h-3"
-                            style={{ color: "var(--blue)", filter: "drop-shadow(0 0 3px rgba(136,192,224,0.8))" }} />
-                        ) : isFuture ? null : (
-                          <div className="w-1 h-1 rounded-full"
-                            style={{ background: isPast ? "rgba(136,192,224,0.2)" : "rgba(136,192,224,0.35)" }} />
-                        )}
-                      </motion.button>
-                    </td>
-                  );
-                })}
-              </motion.tr>
+              <SortableRow
+                key={habit.id}
+                habit={habit}
+                rowIdx={rowIdx}
+                monthDates={monthDates}
+                checks={checks}
+                editingId={editingId}
+                editIcon={editIcon}
+                editName={editName}
+                hoverRow={hoverRow}
+                ripples={ripples}
+                setHoverRow={setHoverRow}
+                setEditIcon={setEditIcon}
+                setEditName={setEditName}
+                setEditingId={setEditingId}
+                onSaveEdit={saveEdit}
+                onStartEdit={startEdit}
+                onDelete={deleteHabit}
+                onToggle={handleToggle}
+                isChecked={isChecked}
+              />
             ))}
           </AnimatePresence>
 
@@ -294,6 +354,8 @@ export function HabitGrid() {
             </td>
           </tr>
         </tbody>
+          </SortableContext>
+        </DndContext>
       </table>
     </motion.div>
   );
