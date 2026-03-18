@@ -2,74 +2,192 @@
 
 import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Check, X, Minus } from "lucide-react";
 import { useHabits } from "@/lib/habit-context";
+import type { Habit, HabitCheck } from "@/lib/supabase";
 
-const DAY_LABELS = ["일","월","화","수","목","금","토"];
+const DAY_SHORT = ["일","월","화","수","목","금","토"];
 
-function getDaysInMonth(year: number, month: number) {
-  return new Date(year, month + 1, 0).getDate();
+type DayInfo = {
+  dateStr: string;
+  dayShort: string;
+  date: number;
+  isToday: boolean;
+  isPast: boolean;
+  isFuture: boolean;
+  isCurrentMonth: boolean;
+};
+
+function RingProgress({ pct, isToday, size = 52 }: { pct: number; isToday: boolean; size?: number }) {
+  const r = size * 0.38;
+  const circ = 2 * Math.PI * r;
+  const offset = circ * (1 - pct / 100);
+  const cx = size / 2, cy = size / 2;
+
+  return (
+    <div className="relative" style={{ width: size, height: size }}>
+      <svg width={size} height={size}>
+        <circle cx={cx} cy={cy} r={r} fill="none"
+          stroke="rgba(136,192,224,0.06)" strokeWidth={3} />
+        <motion.circle cx={cx} cy={cy} r={r} fill="none"
+          stroke={pct === 0 ? "rgba(136,192,224,0.06)" : isToday ? "var(--blue)" : "var(--blue-dim)"}
+          strokeWidth={isToday ? 3.5 : 2.5} strokeLinecap="round"
+          strokeDasharray={circ}
+          initial={{ strokeDashoffset: circ }}
+          animate={{ strokeDashoffset: offset }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          transform={`rotate(-90 ${cx} ${cy})`}
+          style={pct > 0 ? { filter: `drop-shadow(0 0 ${isToday ? 4 : 2}px rgba(136,192,224,${isToday ? 0.5 : 0.25}))` } : undefined}
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="font-bold tabular-nums"
+          style={{
+            fontSize: size * 0.2,
+            color: pct === 0 ? "var(--text-4)" : isToday ? "var(--blue)" : "var(--text-2)",
+            fontFamily: "var(--font-en)",
+          }}>
+          {pct}%
+        </span>
+      </div>
+    </div>
+  );
 }
 
-function getFirstDayOfWeek(year: number, month: number) {
-  return new Date(year, month, 1).getDay(); // 0=일
+function DayColumn({ dayInfo, habits, checks, colIdx, selected, onSelect }: {
+  dayInfo: DayInfo;
+  habits: Habit[];
+  checks: HabitCheck[];
+  colIdx: number;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const { isToday, isFuture, isCurrentMonth, dayShort, date, dateStr } = dayInfo;
+
+  const doneCount = habits.filter(h =>
+    !isFuture && checks.some(c => c.habit_id === h.id && c.checked_date === dateStr)
+  ).length;
+  const pct = isFuture || habits.length === 0 ? 0 : Math.round((doneCount / habits.length) * 100);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: isCurrentMonth ? 1 : 0.35, y: 0 }}
+      transition={{ delay: colIdx * 0.03 }}
+      onClick={onSelect}
+      className="flex flex-col cursor-pointer rounded-xl transition-all duration-200 flex-1 min-w-[100px]"
+      style={{
+        background: selected ? "rgba(136,192,224,0.05)" : isToday ? "rgba(136,192,224,0.03)" : "rgba(255,255,255,0.01)",
+        border: selected ? "1px solid rgba(136,192,224,0.25)" :
+          isToday ? "1px solid rgba(136,192,224,0.12)" : "1px solid rgba(255,255,255,0.04)",
+        boxShadow: selected ? "0 0 16px rgba(136,192,224,0.07)" : "none",
+      }}>
+
+      {/* 요일 헤더 */}
+      <div className="px-2 pt-2.5 pb-2 text-center"
+        style={{ borderBottom: "1px solid rgba(136,192,224,0.06)" }}>
+        <div className="text-[9px] font-medium tracking-widest mb-0.5"
+          style={{ color: isToday ? "var(--blue)" : "var(--text-3)", fontFamily: "var(--font-en)" }}>
+          {dayShort}
+        </div>
+        <div className="text-lg font-bold"
+          style={{ color: isToday ? "var(--text-1)" : isCurrentMonth ? "var(--text-3)" : "var(--text-4)", fontFamily: "var(--font-en)" }}>
+          {date}
+        </div>
+        {isToday && (
+          <div className="text-[8px] tracking-widest" style={{ color: "var(--blue)" }}>오늘</div>
+        )}
+      </div>
+
+      {/* 링 */}
+      <div className="flex justify-center py-2">
+        <RingProgress pct={pct} isToday={isToday} size={52} />
+      </div>
+
+      {/* 달성 수 */}
+      {!isFuture && habits.length > 0 && (
+        <div className="px-2 pb-2.5 text-center">
+          <span className="text-[10px] font-semibold tabular-nums"
+            style={{
+              color: pct >= 80 ? "var(--blue)" : pct >= 50 ? "var(--amber)" : "#c87070",
+              fontFamily: "var(--font-en)",
+            }}>
+            {doneCount}/{habits.length}
+          </span>
+        </div>
+      )}
+      {isFuture && (
+        <div className="px-2 pb-2.5 text-center">
+          <span className="text-[10px]" style={{ color: "var(--text-4)" }}>—</span>
+        </div>
+      )}
+    </motion.div>
+  );
+}
+
+function WeekSection({ weekDays, habits, checks, selectedDate, onSelect, weekIdx }: {
+  weekDays: DayInfo[];
+  habits: Habit[];
+  checks: HabitCheck[];
+  selectedDate: string | null;
+  onSelect: (dateStr: string) => void;
+  weekIdx: number;
+}) {
+  const currentMonthDays = weekDays.filter(d => d.isCurrentMonth && !d.isFuture);
+  const weekDone = currentMonthDays.reduce((sum, d) =>
+    sum + habits.filter(h => checks.some(c => c.habit_id === h.id && c.checked_date === d.dateStr)).length, 0);
+  const weekPossible = currentMonthDays.length * habits.length;
+  const weekPct = weekPossible === 0 ? 0 : Math.round((weekDone / weekPossible) * 100);
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: weekIdx * 0.08 }}>
+      {/* 주차 헤더 */}
+      <div className="flex items-center justify-between mb-2">
+        <span className="label-text">{weekIdx + 1}주차</span>
+        {currentMonthDays.length > 0 && habits.length > 0 && (
+          <span className="text-[10px] font-semibold"
+            style={{
+              color: weekPct >= 80 ? "var(--blue)" : weekPct >= 50 ? "var(--amber)" : "#c87070",
+              fontFamily: "var(--font-en)",
+            }}>
+            {weekPct}%
+          </span>
+        )}
+      </div>
+
+      {/* 7일 컬럼 */}
+      <div className="overflow-x-auto -mx-1 px-1 mb-3">
+        <div className="flex gap-1.5" style={{ minWidth: "620px" }}>
+          {weekDays.map((d, i) => (
+            <DayColumn
+              key={d.dateStr}
+              dayInfo={d}
+              habits={habits}
+              checks={checks}
+              colIdx={i}
+              selected={selectedDate === d.dateStr}
+              onSelect={() => onSelect(d.dateStr)}
+            />
+          ))}
+        </div>
+      </div>
+    </motion.div>
+  );
 }
 
 export function MonthlyView() {
   const { habits, checks, loading } = useHabits();
   const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
 
   const [viewYear, setViewYear] = useState(today.getFullYear());
   const [viewMonth, setViewMonth] = useState(today.getMonth());
-  const [selectedDate, setSelectedDate] = useState<string | null>(
-    today.toISOString().slice(0, 10)
-  );
+  const [selectedDate, setSelectedDate] = useState<string | null>(todayStr);
 
-  const todayStr = today.toISOString().slice(0, 10);
-
-  const daysInMonth = getDaysInMonth(viewYear, viewMonth);
-  const firstDow = getFirstDayOfWeek(viewYear, viewMonth);
-
-  // 이 달의 날짜별 체크 수 & 달성률
-  const dayStats = useMemo(() => {
-    const map: Record<string, { done: number; pct: number }> = {};
-    for (let d = 1; d <= daysInMonth; d++) {
-      const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
-      const done = checks.filter(c => c.checked_date === dateStr).length;
-      const pct = habits.length === 0 ? 0 : Math.round((done / habits.length) * 100);
-      map[dateStr] = { done, pct };
-    }
-    return map;
-  }, [checks, habits, viewYear, viewMonth, daysInMonth]);
-
-  // 월간 통계
-  const monthStats = useMemo(() => {
-    const monthPrefix = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}`;
-    const pastDays = Array.from({ length: daysInMonth }, (_, i) => {
-      const d = `${monthPrefix}-${String(i + 1).padStart(2, "0")}`;
-      return d <= todayStr ? d : null;
-    }).filter(Boolean) as string[];
-
-    if (pastDays.length === 0 || habits.length === 0) return { avgPct: 0, perfectDays: 0, totalChecks: 0 };
-
-    const totalChecks = checks.filter(c => c.checked_date.startsWith(monthPrefix)).length;
-    const totalPossible = habits.length * pastDays.length;
-    const avgPct = Math.round((totalChecks / totalPossible) * 100);
-    const perfectDays = pastDays.filter(d => (dayStats[d]?.pct ?? 0) === 100).length;
-
-    return { avgPct, perfectDays, totalChecks };
-  }, [checks, habits, viewYear, viewMonth, daysInMonth, todayStr, dayStats]);
-
-  // 선택된 날 상세
-  const selectedDetail = useMemo(() => {
-    if (!selectedDate) return null;
-    const isFuture = selectedDate > todayStr;
-    const habitDetails = habits.map(h => ({
-      habit: h,
-      done: checks.some(c => c.habit_id === h.id && c.checked_date === selectedDate),
-    }));
-    return { isFuture, habitDetails };
-  }, [selectedDate, habits, checks, todayStr]);
+  const isCurrentViewMonth = viewYear === today.getFullYear() && viewMonth === today.getMonth();
 
   const prevMonth = () => {
     if (viewMonth === 0) { setViewYear(y => y - 1); setViewMonth(11); }
@@ -82,7 +200,74 @@ export function MonthlyView() {
     setSelectedDate(null);
   };
 
-  const isCurrentMonth = viewYear === today.getFullYear() && viewMonth === today.getMonth();
+  // 이 달의 주 단위로 날짜 생성
+  const weeks = useMemo(() => {
+    const firstDay = new Date(viewYear, viewMonth, 1);
+    const lastDay = new Date(viewYear, viewMonth + 1, 0);
+    const firstDow = firstDay.getDay(); // 0=일
+
+    // 달력 시작일 (이전달 날짜 포함)
+    const startDate = new Date(firstDay);
+    startDate.setDate(startDate.getDate() - firstDow);
+
+    const allWeeks: DayInfo[][] = [];
+    let current = new Date(startDate);
+
+    while (current <= lastDay || current.getDay() !== 0) {
+      const week: DayInfo[] = [];
+      for (let i = 0; i < 7; i++) {
+        const dateStr = current.toISOString().slice(0, 10);
+        const isCurrentMonth = current.getMonth() === viewMonth;
+        week.push({
+          dateStr,
+          dayShort: DAY_SHORT[current.getDay()],
+          date: current.getDate(),
+          isToday: dateStr === todayStr,
+          isPast: dateStr < todayStr,
+          isFuture: dateStr > todayStr,
+          isCurrentMonth,
+        });
+        current.setDate(current.getDate() + 1);
+      }
+      allWeeks.push(week);
+      if (current > lastDay && current.getDay() === 0) break;
+    }
+
+    return allWeeks;
+  }, [viewYear, viewMonth, todayStr]);
+
+  // 월간 통계
+  const monthStats = useMemo(() => {
+    const monthPrefix = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}`;
+    const daysInMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+    const pastDays = Array.from({ length: daysInMonth }, (_, i) => {
+      const d = `${monthPrefix}-${String(i + 1).padStart(2, "0")}`;
+      return d <= todayStr ? d : null;
+    }).filter(Boolean) as string[];
+
+    if (pastDays.length === 0 || habits.length === 0) return { avgPct: 0, perfectDays: 0, totalChecks: 0 };
+
+    const totalChecks = checks.filter(c => c.checked_date.startsWith(monthPrefix)).length;
+    const totalPossible = habits.length * pastDays.length;
+    const avgPct = Math.round((totalChecks / totalPossible) * 100);
+    const perfectDays = pastDays.filter(d => {
+      const done = checks.filter(c => c.checked_date === d).length;
+      return done === habits.length;
+    }).length;
+
+    return { avgPct, perfectDays, totalChecks };
+  }, [checks, habits, viewYear, viewMonth, todayStr]);
+
+  // 선택된 날 상세
+  const selectedDetail = useMemo(() => {
+    if (!selectedDate) return null;
+    const isFuture = selectedDate > todayStr;
+    const habitDetails = habits.map(h => ({
+      habit: h,
+      done: checks.some(c => c.habit_id === h.id && c.checked_date === selectedDate),
+    }));
+    return { isFuture, habitDetails };
+  }, [selectedDate, habits, checks, todayStr]);
 
   if (loading) {
     return (
@@ -93,18 +278,13 @@ export function MonthlyView() {
     );
   }
 
-  const cells: (number | null)[] = [
-    ...Array.from({ length: firstDow }, () => null),
-    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
-  ];
-
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.35 }}>
 
       {/* 헤더 */}
       <div className="flex items-center justify-between mb-5">
         <div>
-          <p className="label-text mb-1.5">MONTHLY OVERVIEW</p>
+          <p className="label-text mb-1.5">MONTHLY RESULTS</p>
           <h2 className="text-sm font-semibold" style={{ color: "var(--text-1)" }}>
             {viewYear}년 {viewMonth + 1}월 기록
           </h2>
@@ -115,8 +295,9 @@ export function MonthlyView() {
             style={{ background: "rgba(136,192,224,0.06)", border: "1px solid var(--border-2)" }}>
             <ChevronLeft className="w-3.5 h-3.5" style={{ color: "var(--text-3)" }} />
           </motion.button>
-          {!isCurrentMonth && (
-            <motion.button onClick={() => { setViewYear(today.getFullYear()); setViewMonth(today.getMonth()); }}
+          {!isCurrentViewMonth && (
+            <motion.button
+              onClick={() => { setViewYear(today.getFullYear()); setViewMonth(today.getMonth()); setSelectedDate(todayStr); }}
               whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
               className="px-2.5 py-1 rounded-lg text-[10px] font-medium"
               style={{ background: "rgba(136,192,224,0.08)", border: "1px solid var(--border-1)", color: "var(--blue)" }}>
@@ -124,16 +305,16 @@ export function MonthlyView() {
             </motion.button>
           )}
           <motion.button onClick={nextMonth} whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-            disabled={isCurrentMonth}
+            disabled={isCurrentViewMonth}
             className="w-7 h-7 rounded-lg flex items-center justify-center"
-            style={{ background: "rgba(136,192,224,0.06)", border: "1px solid var(--border-2)", opacity: isCurrentMonth ? 0.3 : 1 }}>
+            style={{ background: "rgba(136,192,224,0.06)", border: "1px solid var(--border-2)", opacity: isCurrentViewMonth ? 0.3 : 1 }}>
             <ChevronRight className="w-3.5 h-3.5" style={{ color: "var(--text-3)" }} />
           </motion.button>
         </div>
       </div>
 
       {/* 월간 통계 */}
-      <div className="grid grid-cols-3 gap-3 mb-5">
+      <div className="grid grid-cols-3 gap-3 mb-6">
         {[
           { label: "평균 달성률", value: `${monthStats.avgPct}%`, color: "var(--blue)" },
           { label: "완벽한 날", value: `${monthStats.perfectDays}일`, color: "var(--amber)" },
@@ -147,90 +328,18 @@ export function MonthlyView() {
         ))}
       </div>
 
-      {/* 캘린더 */}
-      <div className="rounded-xl overflow-hidden" style={{ border: "1px solid var(--border-2)" }}>
-        {/* 요일 헤더 */}
-        <div className="grid grid-cols-7">
-          {DAY_LABELS.map((d, i) => (
-            <div key={d} className="py-2 text-center text-[10px] font-medium"
-              style={{
-                color: i === 0 ? "#c87070" : i === 6 ? "var(--blue-dim)" : "var(--text-3)",
-                background: "rgba(136,192,224,0.03)",
-                borderBottom: "1px solid var(--border-2)",
-              }}>
-              {d}
-            </div>
-          ))}
-        </div>
-
-        {/* 날짜 셀 */}
-        <div className="grid grid-cols-7">
-          {cells.map((day, idx) => {
-            if (!day) return (
-              <div key={`e-${idx}`} className="aspect-square"
-                style={{ borderRight: "1px solid var(--border-2)", borderBottom: "1px solid var(--border-2)" }} />
-            );
-            const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
-            const isFuture = dateStr > todayStr;
-            const isToday = dateStr === todayStr;
-            const isSelected = dateStr === selectedDate;
-            const stats = dayStats[dateStr] ?? { done: 0, pct: 0 };
-            const dow = (firstDow + day - 1) % 7;
-            const isSun = dow === 0, isSat = dow === 6;
-
-            const pct = stats.pct;
-            const bgAlpha = isFuture ? 0 : pct === 0 ? 0.01 : pct < 50 ? 0.04 : pct < 100 ? 0.08 : 0.14;
-
-            return (
-              <motion.div key={dateStr}
-                whileHover={{ scale: 0.95 }}
-                onClick={() => setSelectedDate(isSelected ? null : dateStr)}
-                className="aspect-square flex flex-col items-center justify-center cursor-pointer relative"
-                style={{
-                  background: isSelected
-                    ? "rgba(136,192,224,0.12)"
-                    : `rgba(136,192,224,${bgAlpha})`,
-                  borderRight: "1px solid var(--border-2)",
-                  borderBottom: "1px solid var(--border-2)",
-                  outline: isSelected ? "1.5px solid rgba(136,192,224,0.4)" : isToday ? "1.5px solid rgba(136,192,224,0.25)" : "none",
-                  outlineOffset: "-1.5px",
-                }}>
-                <span className="text-[11px] font-medium leading-tight"
-                  style={{
-                    color: isFuture ? "var(--text-4)" :
-                      isToday ? "var(--blue)" :
-                      isSun ? "#c87070" : isSat ? "var(--blue-dim)" : "var(--text-2)",
-                    fontFamily: "var(--font-en)",
-                  }}>
-                  {day}
-                </span>
-                {!isFuture && habits.length > 0 && (
-                  <div className="w-1.5 h-1.5 rounded-full mt-0.5"
-                    style={{
-                      background: pct === 0 ? "rgba(200,100,100,0.3)" :
-                        pct < 50 ? "var(--amber)" :
-                        pct < 100 ? "rgba(136,192,224,0.5)" : "var(--blue)",
-                      boxShadow: pct === 100 ? "0 0 5px rgba(136,192,224,0.6)" : "none",
-                    }} />
-                )}
-              </motion.div>
-            );
-          })}
-        </div>
-      </div>
-
-      {/* 범례 */}
-      <div className="flex items-center gap-4 mt-3 justify-end flex-wrap">
-        {[
-          { dot: "var(--blue)", label: "100%" },
-          { dot: "rgba(136,192,224,0.5)", label: "50%+" },
-          { dot: "var(--amber)", label: "50%-" },
-          { dot: "rgba(200,100,100,0.3)", label: "0%" },
-        ].map(({ dot, label }) => (
-          <div key={label} className="flex items-center gap-1">
-            <div className="w-1.5 h-1.5 rounded-full" style={{ background: dot }} />
-            <span className="text-[10px]" style={{ color: "var(--text-4)" }}>{label}</span>
-          </div>
+      {/* 주차별 컬럼 */}
+      <div className="space-y-4">
+        {weeks.map((week, wi) => (
+          <WeekSection
+            key={wi}
+            weekIdx={wi}
+            weekDays={week}
+            habits={habits}
+            checks={checks}
+            selectedDate={selectedDate}
+            onSelect={(d) => setSelectedDate(selectedDate === d ? null : d)}
+          />
         ))}
       </div>
 
@@ -268,6 +377,10 @@ export function MonthlyView() {
                     <span className="text-[9px]" style={{ color: done ? "var(--blue)" : "#c87070" }}>
                       {habit.name}
                     </span>
+                    {done
+                      ? <Check className="w-2.5 h-2.5" style={{ color: "var(--blue)" }} />
+                      : <X className="w-2.5 h-2.5" style={{ color: "#c87070" }} />
+                    }
                   </div>
                 ))}
               </div>
