@@ -74,21 +74,22 @@ function SortableRow({ habit, rowIdx, monthDates, checks, editingId, editIcon, e
               style={{ borderBottom: "1px solid var(--border-1)", color: "var(--text-1)" }} />
           </div>
         ) : (
-          <div className="flex items-center gap-2 min-w-0">
+          <div className="relative flex items-start gap-1.5" style={{ width: 160 }}>
             {/* 드래그 핸들 */}
             <button {...attributes} {...listeners}
-              className="flex-shrink-0 cursor-grab active:cursor-grabbing touch-none"
+              className="flex-shrink-0 cursor-grab active:cursor-grabbing touch-none mt-0.5"
               style={{ color: hoverRow === habit.id ? "var(--text-3)" : "transparent" }}>
               <GripVertical className="w-3 h-3" />
             </button>
-            <span className="text-base leading-none flex-shrink-0">{habit.icon}</span>
-            <span className="text-sm font-medium truncate" style={{ color: "var(--text-1)" }}>{habit.name}</span>
+            <span className="text-base leading-none flex-shrink-0 mt-0.5">{habit.icon}</span>
+            <span className="text-sm font-medium break-keep leading-snug" style={{ color: "var(--text-1)", wordBreak: "break-all", maxWidth: 90 }}>{habit.name}</span>
+            {/* 수정/삭제 — 절대 위치로 레이아웃 영향 없음 */}
             <AnimatePresence>
               {hoverRow === habit.id && (
                 <motion.div
-                  initial={{ opacity: 0, x: -4 }} animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -4 }} transition={{ duration: 0.15 }}
-                  className="flex items-center gap-1 ml-auto flex-shrink-0">
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  exit={{ opacity: 0 }} transition={{ duration: 0.15 }}
+                  className="absolute right-0 top-0 flex items-center gap-1">
                   <motion.button onClick={() => onStartEdit(habit)}
                     whileHover={{ scale: 1.2 }} whileTap={{ scale: 0.9 }}
                     title="수정" style={{ color: "var(--blue)" }}>
