@@ -123,7 +123,7 @@ function WeekMiniChart({ weekData, weekIdx, habits, checks }: {
             </defs>
             <YAxis domain={[0, 100]} hide />
             <XAxis dataKey="day" axisLine={false} tickLine={false}
-              tick={{ fill: "var(--text-4)", fontSize: 7, fontFamily: "monospace" }} />
+              tick={{ fill: "var(--text-3)", fontSize: 10, fontFamily: "monospace" }} />
             <Tooltip content={<CustomTooltip />} cursor={{ fill: "rgba(43,143,240,0.04)", radius: 4 }} />
             <ReferenceLine y={70} stroke="rgba(43,143,240,0.12)" strokeDasharray="3 3" />
             <Bar dataKey="value" radius={[4, 4, 1, 1]}
