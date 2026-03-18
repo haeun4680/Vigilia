@@ -1,312 +1,175 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Sparkles, TrendingUp, AlertCircle, Lightbulb, RefreshCw, KeyRound } from "lucide-react";
-import { createClient } from "@/lib/supabase";
+import { Sparkles, RefreshCw } from "lucide-react";
+import { useHabits } from "@/lib/habit-context";
 
-type Analysis = {
+type CoachResult = {
   strength: string;
   improve: string;
   tip: string;
   score: number;
 };
 
-type State = "idle" | "loading" | "done" | "error" | "no_key" | "no_data";
-
-const insightCards = [
-  {
-    key: "strength" as const,
-    icon: TrendingUp,
-    label: "STRENGTH",
-    labelKo: "잘하고 있어요",
-    color: "var(--blue)",
-    bg: "rgba(136,192,224,0.06)",
-    border: "rgba(136,192,224,0.2)",
-  },
-  {
-    key: "improve" as const,
-    icon: AlertCircle,
-    label: "IMPROVE",
-    labelKo: "이렇게 해봐요",
-    color: "var(--lavender)",
-    bg: "rgba(184,200,240,0.06)",
-    border: "rgba(184,200,240,0.2)",
-  },
-  {
-    key: "tip" as const,
-    icon: Lightbulb,
-    label: "TIP",
-    labelKo: "이번 주 조언",
-    color: "var(--amber)",
-    bg: "rgba(240,208,144,0.06)",
-    border: "rgba(240,208,144,0.18)",
-  },
-];
-
-function getWeekRange() {
-  const today = new Date();
-  const day = today.getDay();
-  const monday = new Date(today);
-  monday.setDate(today.getDate() - ((day + 6) % 7));
-  return Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    return d.toISOString().slice(0, 10);
-  });
-}
-
-function ScoreRing({ score }: { score: number }) {
-  const size = 64;
-  const r = size * 0.38;
-  const circ = 2 * Math.PI * r;
-  const offset = circ * (1 - score / 100);
-  const cx = size / 2, cy = size / 2;
-  const color = score >= 80 ? "var(--blue)" : score >= 60 ? "var(--lavender)" : "var(--amber)";
-
-  return (
-    <div className="relative" style={{ width: size, height: size }}>
-      <svg width={size} height={size}>
-        <circle cx={cx} cy={cy} r={r} fill="none"
-          stroke="rgba(136,192,224,0.08)" strokeWidth={4} />
-        <motion.circle cx={cx} cy={cy} r={r} fill="none"
-          stroke={color} strokeWidth={4} strokeLinecap="round"
-          strokeDasharray={circ}
-          initial={{ strokeDashoffset: circ }}
-          animate={{ strokeDashoffset: offset }}
-          transition={{ duration: 1.2, ease: "easeOut" }}
-          transform={`rotate(-90 ${cx} ${cy})`}
-          style={{ filter: `drop-shadow(0 0 5px ${color})` }}
-        />
-      </svg>
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-sm font-bold tabular-nums" style={{ color, fontFamily: "var(--font-en)" }}>
-          {score}
-        </span>
-      </div>
-    </div>
-  );
-}
-
-function LoadingDots() {
-  return (
-    <div className="flex items-center gap-1.5">
-      {[0, 1, 2].map((i) => (
-        <motion.div key={i}
-          className="w-1.5 h-1.5 rounded-full"
-          style={{ background: "var(--blue)" }}
-          animate={{ opacity: [0.3, 1, 0.3], y: [0, -4, 0] }}
-          transition={{ duration: 1.2, delay: i * 0.2, repeat: Infinity }}
-        />
-      ))}
-    </div>
-  );
-}
-
 export function AiCoach() {
-  const supabase = createClient();
-  const [state, setState] = useState<State>("idle");
-  const [analysis, setAnalysis] = useState<Analysis | null>(null);
-  const [habitCount, setHabitCount] = useState(0);
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
-        supabase.from("habits").select("id", { count: "exact", head: true })
-          .eq("user_id", data.user.id)
-          .then(({ count }) => setHabitCount(count ?? 0));
-      }
-    });
-  }, []);
+  const { habits, checks } = useHabits();
+  const [result, setResult] = useState<CoachResult | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const analyze = async () => {
-    setState("loading");
+    setLoading(true);
+    setError(null);
+
+    // 이번 주 날짜 계산
+    const today = new Date();
+    const monday = new Date(today);
+    monday.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+    const weekDates = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      return d.toISOString().slice(0, 10);
+    });
+
+    const habitsPayload = habits.map((h) => ({
+      icon: h.icon ?? "✅",
+      name: h.name,
+      checks: weekDates.map((d) =>
+        checks.some((c) => c.habit_id === h.id && c.checked_date === d)
+      ),
+    }));
+
+    const totalPossible = habits.length * 7;
+    const totalDone = habitsPayload.reduce((s, h) => s + h.checks.filter(Boolean).length, 0);
+    const weeklyStats = totalPossible === 0 ? 0 : Math.round((totalDone / totalPossible) * 100);
+
+    const isInTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+    const analyzeUrl = isInTauri
+      ? "https://habit-tracker-nine-sigma.vercel.app/api/analyze"
+      : "/api/analyze";
+
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) { setState("error"); return; }
-
-      const weekDates = getWeekRange();
-
-      // 실제 습관 + 체크 데이터 가져오기
-      const [{ data: habits }, { data: checks }] = await Promise.all([
-        supabase.from("habits").select("*").eq("user_id", user.id).order("created_at"),
-        supabase.from("habit_checks").select("*").eq("user_id", user.id)
-          .in("checked_date", weekDates),
-      ]);
-
-      if (!habits || habits.length === 0) {
-        setState("no_data");
-        return;
-      }
-
-      // 습관별 이번 주 체크 현황 계산
-      const habitRows = habits.map(h => ({
-        icon: h.icon,
-        name: h.name,
-        checks: weekDates.map(d =>
-          checks?.some(c => c.habit_id === h.id && c.checked_date === d) ?? false
-        ),
-      }));
-
-      const totalPossible = habits.length * 7;
-      const totalDone = habitRows.reduce((s, h) => s + h.checks.filter(Boolean).length, 0);
-      const weeklyStats = Math.round((totalDone / totalPossible) * 100);
-
-      const res = await fetch("/api/analyze", {
+      const res = await fetch(analyzeUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ habits: habitRows, weeklyStats }),
+        body: JSON.stringify({ habits: habitsPayload, weeklyStats }),
       });
-
       const data = await res.json();
-      if (data.error === "API_KEY_MISSING") { setState("no_key"); return; }
-      if (data.error) throw new Error(data.error);
-
-      setAnalysis(data);
-      setState("done");
+      if (data.error) {
+        setError(data.error === "API_KEY_MISSING" ? "AI 기능이 아직 설정되지 않았어요." : data.error);
+      } else {
+        setResult(data);
+      }
     } catch {
-      setState("error");
+      setError("분석 중 오류가 발생했어요.");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: 0.2 }} className="w-full">
-
-      {/* 헤더 */}
-      <div className="flex items-center justify-between mb-5">
-        <div>
-          <p className="label-text mb-1.5">AI COACH</p>
-          <h2 className="text-sm font-semibold flex items-center gap-2" style={{ color: "var(--text-1)" }}>
-            <Sparkles className="w-3.5 h-3.5" style={{ color: "var(--blue)" }} />
-            루틴 AI 분석
-          </h2>
+    <div className="space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Sparkles className="w-4 h-4" style={{ color: "var(--blue)" }} />
+          <span className="text-sm font-semibold" style={{ color: "var(--text-1)" }}>AI 루틴 코치</span>
         </div>
-
-        {(state === "idle" || state === "error" || state === "done") && (
-          <button onClick={analyze}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-150"
-            style={{
-              background: "rgba(136,192,224,0.08)",
-              border: "1px solid rgba(136,192,224,0.2)",
-              color: "var(--blue)",
-            }}>
-            {state === "done"
-              ? <><RefreshCw className="w-3 h-3" /> 재분석</>
-              : <><Sparkles className="w-3 h-3" /> 분석 시작</>
-            }
-          </button>
-        )}
+        <motion.button
+          onClick={analyze}
+          disabled={loading || habits.length === 0}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
+          style={{
+            background: "rgba(136,192,224,0.1)",
+            border: "1px solid rgba(136,192,224,0.25)",
+            color: "var(--blue)",
+            opacity: (loading || habits.length === 0) ? 0.5 : 1,
+          }}
+        >
+          <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} />
+          {loading ? "분석 중..." : result ? "재분석" : "분석하기"}
+        </motion.button>
       </div>
 
       <AnimatePresence mode="wait">
-
-        {/* idle */}
-        {state === "idle" && (
-          <motion.div key="idle"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="flex flex-col items-center justify-center py-8 gap-3"
-            style={{ border: "1px dashed var(--border-1)", borderRadius: 12 }}>
-            <Sparkles className="w-6 h-6" style={{ color: "rgba(136,192,224,0.3)" }} />
-            <p className="text-xs text-center" style={{ color: "var(--text-3)" }}>
-              {habitCount === 0
-                ? "루틴을 먼저 추가하면\nAI 분석을 받을 수 있어요"
-                : "분석 시작 버튼을 눌러\nAI 루틴 코치의 인사이트를 받아보세요"
-              }
-            </p>
+        {loading && (
+          <motion.div
+            key="loading"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="py-6 flex flex-col items-center gap-2"
+          >
+            <div className="w-6 h-6 rounded-full border-2 animate-spin"
+              style={{ borderColor: "var(--blue)", borderTopColor: "transparent" }} />
+            <p className="text-xs" style={{ color: "var(--text-3)" }}>루틴을 분석하는 중...</p>
           </motion.div>
         )}
 
-        {/* loading */}
-        {state === "loading" && (
-          <motion.div key="loading"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="flex flex-col items-center justify-center py-10 gap-4">
-            <LoadingDots />
-            <p className="text-xs" style={{ color: "var(--text-3)" }}>내 루틴 데이터 분석 중...</p>
+        {error && !loading && (
+          <motion.div
+            key="error"
+            initial={{ opacity: 0, y: 4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="p-3 rounded-lg text-xs"
+            style={{ background: "rgba(248,113,113,0.08)", color: "#f87171", border: "1px solid rgba(248,113,113,0.2)" }}
+          >
+            {error}
           </motion.div>
         )}
 
-        {/* no_data */}
-        {state === "no_data" && (
-          <motion.div key="no_data"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="py-6 flex flex-col items-center gap-2">
-            <p className="text-xs text-center" style={{ color: "var(--text-3)" }}>
-              루틴을 먼저 추가해주세요!<br />
-              추가하고 체크를 몇 번 하면 AI가 분석해드려요.
-            </p>
-          </motion.div>
-        )}
+        {result && !loading && (
+          <motion.div
+            key="result"
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="space-y-2.5"
+          >
+            {/* 점수 */}
+            <div className="flex items-center justify-between p-3 rounded-xl"
+              style={{ background: "rgba(136,192,224,0.06)", border: "1px solid rgba(136,192,224,0.12)" }}>
+              <span className="text-xs font-medium" style={{ color: "var(--text-2)" }}>이번 주 루틴 점수</span>
+              <span className="text-lg font-bold" style={{ color: "var(--blue)" }}>{result.score}점</span>
+            </div>
 
-        {/* no key */}
-        {state === "no_key" && (
-          <motion.div key="no_key"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="p-4 rounded-xl flex items-start gap-3"
-            style={{ background: "rgba(240,208,144,0.06)", border: "1px solid rgba(240,208,144,0.18)" }}>
-            <KeyRound className="w-4 h-4 mt-0.5 flex-shrink-0" style={{ color: "var(--amber)" }} />
-            <div>
-              <p className="text-xs font-medium mb-1" style={{ color: "var(--amber)" }}>API 키가 필요해요</p>
-              <p className="text-[11px]" style={{ color: "var(--text-2)" }}>
-                <code className="px-1 rounded" style={{ background: "rgba(255,255,255,0.05)" }}>.env.local</code> 파일에
-                Gemini API 키를 입력해주세요.
-              </p>
+            {/* 잘하고 있는 점 */}
+            <div className="space-y-1">
+              <p className="text-[11px] font-semibold" style={{ color: "var(--blue-dim)" }}>✨ 잘하고 있어요</p>
+              <p className="text-xs leading-relaxed" style={{ color: "var(--text-2)" }}>{result.strength}</p>
+            </div>
+
+            {/* 개선점 */}
+            <div className="space-y-1">
+              <p className="text-[11px] font-semibold" style={{ color: "var(--amber)" }}>💡 이렇게 해보세요</p>
+              <p className="text-xs leading-relaxed" style={{ color: "var(--text-2)" }}>{result.improve}</p>
+            </div>
+
+            {/* 팁 */}
+            <div className="p-2.5 rounded-lg space-y-1"
+              style={{ background: "rgba(136,192,224,0.04)", border: "1px solid rgba(136,192,224,0.1)" }}>
+              <p className="text-[11px] font-semibold" style={{ color: "var(--text-3)" }}>이번 주 팁</p>
+              <p className="text-xs leading-relaxed" style={{ color: "var(--text-2)" }}>{result.tip}</p>
             </div>
           </motion.div>
         )}
 
-        {/* error */}
-        {state === "error" && (
-          <motion.div key="error"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="py-6 flex flex-col items-center gap-2">
-            <p className="text-xs" style={{ color: "#c87070" }}>분석 중 오류가 발생했어요. 다시 시도해주세요.</p>
+        {!result && !loading && !error && (
+          <motion.div
+            key="empty"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="py-4 text-center"
+          >
+            <p className="text-xs" style={{ color: "var(--text-4)" }}>
+              분석하기 버튼을 눌러 AI 코칭을 받아보세요
+            </p>
           </motion.div>
         )}
-
-        {/* done */}
-        {state === "done" && analysis && (
-          <motion.div key="done"
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-            className="space-y-3">
-
-            <div className="flex items-center gap-4 p-3 rounded-xl"
-              style={{ background: "rgba(136,192,224,0.04)", border: "1px solid var(--border-2)" }}>
-              <ScoreRing score={analysis.score} />
-              <div>
-                <p className="label-text mb-1">이번 주 루틴 점수</p>
-                <p className="text-lg font-bold tabular-nums"
-                  style={{
-                    color: analysis.score >= 80 ? "var(--blue)" : analysis.score >= 60 ? "var(--lavender)" : "var(--amber)",
-                    fontFamily: "var(--font-en)",
-                  }}>
-                  {analysis.score}점
-                  <span className="text-xs font-normal ml-1.5" style={{ color: "var(--text-3)" }}>/ 100</span>
-                </p>
-              </div>
-            </div>
-
-            {insightCards.map(({ key, icon: Icon, label, labelKo, color, bg, border }, i) => (
-              <motion.div key={key}
-                initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: i * 0.08 }}
-                className="p-3 rounded-xl"
-                style={{ background: bg, border: `1px solid ${border}` }}>
-                <div className="flex items-center gap-1.5 mb-1.5">
-                  <Icon className="w-3 h-3" style={{ color }} />
-                  <span className="label-text" style={{ color }}>{label}</span>
-                  <span className="text-[9px]" style={{ color: "var(--text-3)" }}>— {labelKo}</span>
-                </div>
-                <p className="text-xs leading-relaxed" style={{ color: "var(--text-2)" }}>
-                  {analysis[key]}
-                </p>
-              </motion.div>
-            ))}
-          </motion.div>
-        )}
-
       </AnimatePresence>
-    </motion.div>
+    </div>
   );
 }

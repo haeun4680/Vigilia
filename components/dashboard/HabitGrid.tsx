@@ -128,7 +128,7 @@ export function HabitGrid() {
             ))}
           </tr>
           <tr>
-            <td colSpan={9} className="pb-2" style={{ borderBottom: "1px solid var(--border-2)" }} />
+            <td colSpan={monthDates.length + 1} className="pb-2" style={{ borderBottom: "1px solid var(--border-2)" }} />
           </tr>
         </thead>
 
@@ -136,7 +136,7 @@ export function HabitGrid() {
           <AnimatePresence initial={false}>
             {habits.length === 0 && !adding && (
               <tr>
-                <td colSpan={9} className="py-8 text-center">
+                <td colSpan={monthDates.length + 1} className="py-8 text-center">
                   <p className="text-xs" style={{ color: "var(--text-3)" }}>
                     아직 루틴이 없어요. 아래 버튼으로 추가해보세요!
                   </p>
@@ -280,10 +280,10 @@ export function HabitGrid() {
           </AnimatePresence>
 
           <tr>
-            <td colSpan={9} className="pt-1" style={{ borderTop: "1px solid var(--border-2)" }} />
+            <td colSpan={monthDates.length + 1} className="pt-1" style={{ borderTop: "1px solid var(--border-2)" }} />
           </tr>
           <tr>
-            <td colSpan={9} className="pt-2 pb-1">
+            <td colSpan={monthDates.length + 1} className="pt-2 pb-1">
               <motion.button onClick={() => setAdding(true)}
                 whileHover={{ x: 2 }} whileTap={{ scale: 0.95 }}
                 className="flex items-center gap-1.5 text-sm font-medium"

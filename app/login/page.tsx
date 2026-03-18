@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 
 function GoogleIcon() {
@@ -35,15 +36,26 @@ function NaverIcon() {
 
 export default function LoginPage() {
   const [loading, setLoading] = useState<string | null>(null);
+  const router = useRouter();
   const supabase = createClient();
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) router.replace("/dashboard");
+    });
+  }, []);
 
   const signInWith = async (provider: "google" | "kakao") => {
     setLoading(provider);
+    const isProductionTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+
+    const redirectTo = isProductionTauri
+      ? "http://tauri.localhost/dashboard/"
+      : `${window.location.origin}/dashboard`;
+
     await supabase.auth.signInWithOAuth({
       provider,
-      options: {
-        redirectTo: `${window.location.origin}/dashboard`,
-      },
+      options: { redirectTo },
     });
     setLoading(null);
   };

@@ -34,7 +34,7 @@ function getBarGlow(value: number | null, isToday: boolean) {
   return "none";
 }
 
-const DAY_SHORTS = ["M","T","W","T","F","S","S"];
+const DAY_SHORTS = ["월","화","수","목","금","토","일"];
 
 // 지난 4주 각각의 Mon~Sun 날짜 배열
 function getWeeks() {
@@ -187,10 +187,12 @@ export function MiddleOverview() {
           ))}
         </div>
       </div>
-      <div className="flex gap-3">
-        {weeks.map((w, i) => (
-          <WeekMiniChart key={w.week} weekData={w} weekIdx={i} habits={habits} checks={checks} />
-        ))}
+      <div className="overflow-x-auto -mx-1 px-1">
+        <div className="flex gap-3" style={{ minWidth: "440px" }}>
+          {weeks.map((w, i) => (
+            <WeekMiniChart key={w.week} weekData={w} weekIdx={i} habits={habits} checks={checks} />
+          ))}
+        </div>
       </div>
     </motion.div>
   );

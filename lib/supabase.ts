@@ -1,10 +1,13 @@
-import { createBrowserClient } from "@supabase/ssr";
+import { createClient as _create } from "@supabase/supabase-js";
+
+// 싱글턴 — tauri.localhost에서 쿠키 대신 localStorage 사용
+const _client = _create<any>(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export function createClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
+  return _client;
 }
 
 export type Habit = {

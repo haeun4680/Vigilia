@@ -1,9 +1,22 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
-import { habitRows, weekDates } from "@/lib/mock-data";
 import { Check, X, Minus } from "lucide-react";
+import { useHabits } from "@/lib/habit-context";
+import type { Habit, HabitCheck } from "@/lib/supabase";
+import { AiCoach } from "@/components/dashboard/AiCoach";
+
+const DAY_SHORT = ["일","월","화","수","목","금","토"];
+
+type DayInfo = {
+  dateStr: string;
+  dayShort: string;
+  date: number;
+  isToday: boolean;
+  isPast: boolean;
+  isFuture: boolean;
+};
 
 function RingProgress({ pct, isToday, size = 72 }: { pct: number; isToday: boolean; size?: number }) {
   const r = size * 0.38;
@@ -42,7 +55,7 @@ function RingProgress({ pct, isToday, size = 72 }: { pct: number; isToday: boole
 }
 
 function TaskItem({ habit, status, delay }: {
-  habit: typeof habitRows[0];
+  habit: Habit;
   status: "done" | "missed" | "future";
   delay: number;
 }) {
@@ -76,20 +89,26 @@ function TaskItem({ habit, status, delay }: {
   );
 }
 
-function DayColumn({ dayInfo, colIdx, selected, onSelect }: {
-  dayInfo: typeof weekDates[0]; colIdx: number; selected: boolean; onSelect: () => void;
+function DayColumn({ dayInfo, habits, checks, colIdx, selected, onSelect }: {
+  dayInfo: DayInfo;
+  habits: Habit[];
+  checks: HabitCheck[];
+  colIdx: number;
+  selected: boolean;
+  onSelect: () => void;
 }) {
-  const { isToday, isPast, dayShort, date } = dayInfo;
-  const tasksWithStatus = habitRows.map((h) => ({
+  const { isToday, isPast, isFuture, dayShort, date, dateStr } = dayInfo;
+
+  const tasksWithStatus = habits.map((h) => ({
     habit: h,
     status: (
-      isPast  ? (h.checks[colIdx] ? "done" : "missed") :
-      isToday ? (h.checks[colIdx] ? "done" : "missed") :
-      "future"
+      isFuture ? "future" :
+      checks.some(c => c.habit_id === h.id && c.checked_date === dateStr) ? "done" : "missed"
     ) as "done" | "missed" | "future",
   }));
+
   const doneCount = tasksWithStatus.filter((t) => t.status === "done").length;
-  const pct = (isToday || isPast) ? Math.round((doneCount / habitRows.length) * 100) : 0;
+  const pct = isFuture || habits.length === 0 ? 0 : Math.round((doneCount / habits.length) * 100);
 
   return (
     <motion.div
@@ -107,13 +126,11 @@ function DayColumn({ dayInfo, colIdx, selected, onSelect }: {
       <div className="px-3 pt-3 pb-2.5 text-center"
         style={{ borderBottom: "1px solid rgba(136,192,224,0.06)" }}>
         <div className="text-[9px] font-medium tracking-[0.18em] mb-1"
-          style={{
-            color: isToday ? "var(--blue)" : "var(--text-3)",
-            fontFamily: "var(--font-en)",
-          }}>
+          style={{ color: isToday ? "var(--blue)" : "var(--text-3)", fontFamily: "var(--font-en)" }}>
           {dayShort}
         </div>
-        <div className="text-xl font-bold" style={{ color: isToday ? "var(--text-1)" : "var(--text-4)", fontFamily: "var(--font-en)" }}>
+        <div className="text-xl font-bold"
+          style={{ color: isToday ? "var(--text-1)" : "var(--text-4)", fontFamily: "var(--font-en)" }}>
           {date}
         </div>
         {isToday && (
@@ -134,8 +151,11 @@ function DayColumn({ dayInfo, colIdx, selected, onSelect }: {
             <TaskItem key={habit.id} habit={habit} status={status}
               delay={colIdx * 0.05 + i * 0.025} />
           ))}
+          {habits.length === 0 && (
+            <p className="text-[10px]" style={{ color: "var(--text-4)" }}>루틴 없음</p>
+          )}
         </div>
-        {(isToday || isPast) && (
+        {!isFuture && habits.length > 0 && (
           <div className="mt-2.5 pt-2" style={{ borderTop: "1px solid rgba(136,192,224,0.06)" }}>
             <div className="flex items-center justify-between">
               <span className="label-text">달성</span>
@@ -144,7 +164,7 @@ function DayColumn({ dayInfo, colIdx, selected, onSelect }: {
                   color: pct >= 80 ? "var(--blue)" : pct >= 50 ? "var(--amber)" : "#c87070",
                   fontFamily: "var(--font-en)",
                 }}>
-                {doneCount}/{habitRows.length}
+                {doneCount}/{habits.length}
               </span>
             </div>
           </div>
@@ -155,10 +175,44 @@ function DayColumn({ dayInfo, colIdx, selected, onSelect }: {
 }
 
 export function WeeklyView() {
-  const todayIdx = weekDates.findIndex((d) => d.isToday);
+  const { habits, checks, weekDates, loading } = useHabits();
+
+  const dayInfos: DayInfo[] = useMemo(() => {
+    const today = new Date().toISOString().slice(0, 10);
+    return weekDates.map((dateStr) => {
+      const d = new Date(dateStr);
+      const isToday = dateStr === today;
+      const isPast = dateStr < today;
+      return {
+        dateStr,
+        dayShort: DAY_SHORT[d.getDay()],
+        date: d.getDate(),
+        isToday,
+        isPast,
+        isFuture: !isToday && !isPast,
+      };
+    });
+  }, [weekDates]);
+
+  const todayIdx = dayInfos.findIndex((d) => d.isToday);
   const [selected, setSelected] = useState(todayIdx >= 0 ? todayIdx : 0);
-  const selectedDay = weekDates[selected];
-  const totalDone = habitRows.filter((h) => h.checks[selected]).length;
+  const selectedDay = dayInfos[selected];
+
+  const selectedDoneCount = useMemo(() => {
+    if (!selectedDay) return 0;
+    return habits.filter(h =>
+      checks.some(c => c.habit_id === h.id && c.checked_date === selectedDay.dateStr)
+    ).length;
+  }, [habits, checks, selectedDay]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <div className="w-5 h-5 rounded-full border-2 animate-spin"
+          style={{ borderColor: "var(--blue)", borderTopColor: "transparent" }} />
+      </div>
+    );
+  }
 
   return (
     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.35 }}>
@@ -171,7 +225,7 @@ export function WeeklyView() {
         <div className="text-right">
           <p className="label-text mb-0.5">{selectedDay?.dayShort} · {selectedDay?.date}</p>
           <p className="text-sm font-semibold" style={{ color: "var(--blue)", fontFamily: "var(--font-en)" }}>
-            {totalDone}/{habitRows.length} 완료
+            {selectedDoneCount}/{habits.length} 완료
           </p>
         </div>
       </div>
@@ -179,11 +233,23 @@ export function WeeklyView() {
       {/* 7일 컬럼 */}
       <div className="overflow-x-auto -mx-1 px-1">
         <div className="flex gap-2" style={{ minWidth: "700px" }}>
-          {weekDates.map((d, i) => (
-            <DayColumn key={i} dayInfo={d} colIdx={i}
-              selected={selected === i} onSelect={() => setSelected(i)} />
+          {dayInfos.map((d, i) => (
+            <DayColumn
+              key={d.dateStr}
+              dayInfo={d}
+              habits={habits}
+              checks={checks}
+              colIdx={i}
+              selected={selected === i}
+              onSelect={() => setSelected(i)}
+            />
           ))}
         </div>
+      </div>
+
+      {/* AI 코치 */}
+      <div className="mt-4 p-4 rounded-xl" style={{ background: "rgba(136,192,224,0.02)", border: "1px solid var(--border-2)" }}>
+        <AiCoach />
       </div>
 
       {/* 선택된 날 요약 */}
@@ -195,11 +261,11 @@ export function WeeklyView() {
           style={{ background: "rgba(136,192,224,0.02)", border: "1px solid var(--border-2)" }}>
           <div className="flex items-center gap-2 flex-wrap">
             <span className="label-text mr-1">{selectedDay?.dayShort} 요약</span>
-            {habitRows.map((h, i) => {
-              const done = h.checks[selected];
-              const isFuture = !selectedDay?.isToday && !selectedDay?.isPast;
+            {habits.map((h) => {
+              const done = checks.some(c => c.habit_id === h.id && c.checked_date === selectedDay?.dateStr);
+              const isFuture = selectedDay?.isFuture;
               return (
-                <div key={i} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
+                <div key={h.id} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
                   style={{
                     background: isFuture ? "rgba(255,255,255,0.02)" :
                       done ? "rgba(136,192,224,0.07)" : "rgba(200,100,100,0.05)",
@@ -218,6 +284,9 @@ export function WeeklyView() {
                 </div>
               );
             })}
+            {habits.length === 0 && (
+              <p className="text-xs" style={{ color: "var(--text-3)" }}>아직 루틴이 없어요.</p>
+            )}
           </div>
         </motion.div>
       </AnimatePresence>

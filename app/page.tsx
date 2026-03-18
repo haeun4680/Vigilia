@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Sparkles, BarChart2, CalendarDays, Brain, ArrowRight, Check } from "lucide-react";
+import { createClient } from "@/lib/supabase";
 
 const features = [
   {
@@ -52,10 +54,19 @@ const previewHabits = [
   { icon: "🏃", name: "운동",   checks: [false, true,  true,  true,  false, true,  true ] },
   { icon: "💊", name: "비타민", checks: [true,  true,  false, true,  true,  true,  false] },
 ];
-const previewDays = ["MON","TUE","WED","THU","FRI","SAT","SUN"];
+const previewDays = ["월","화","수","목","금","토","일"];
 
 export default function Landing() {
   const [moonHovered, setMoonHovered] = useState(false);
+  const router = useRouter();
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) router.replace("/dashboard");
+    });
+  }, []);
+
   return (
     <div className="min-h-screen" style={{ background: "var(--bg)" }}>
 
@@ -196,7 +207,7 @@ export default function Landing() {
                     <div />
                     {previewDays.map(d => (
                       <div key={d} className="text-center text-[9px] font-medium tracking-wider"
-                        style={{ color: d === "TUE" ? "var(--blue)" : "var(--text-4)", fontFamily: "var(--font-en)" }}>{d}</div>
+                        style={{ color: d === "화" ? "var(--blue)" : "var(--text-4)" }}>{d}</div>
                     ))}
                   </div>
 

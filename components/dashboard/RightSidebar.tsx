@@ -1,9 +1,10 @@
 "use client";
 
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
-import { overallStats, habitRows } from "@/lib/mock-data";
 import { Flame, TrendingUp, Calendar, Star } from "lucide-react";
+import { useHabits } from "@/lib/habit-context";
 
 const StatRow = ({ icon: Icon, label, value, delay }: {
   icon: any; label: string; value: string | number; delay: number;
@@ -23,15 +24,71 @@ const StatRow = ({ icon: Icon, label, value, delay }: {
 );
 
 export function RightSidebar() {
-  const { completionRate, longestStreak, currentStreak, bestHabit, pieData, totalDays } = overallStats;
-  const habitStats = habitRows.map((h) => ({
-    name: h.name, icon: h.icon,
-    rate: Math.round((h.monthly.filter(Boolean).length / Math.max(totalDays, 1)) * 100),
-  }));
+  const { habits, checks } = useHabits();
+
+  const stats = useMemo(() => {
+    const now = new Date();
+    const today = now.toISOString().slice(0, 10);
+    const monthPrefix = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const daysThisMonth = now.getDate();
+
+    // 이번 달 달성률
+    const thisMonthChecks = checks.filter(c => c.checked_date.startsWith(monthPrefix));
+    const totalPossible = habits.length * daysThisMonth;
+    const completionRate = totalPossible === 0 ? 0
+      : Math.round((thisMonthChecks.length / totalPossible) * 100);
+
+    // 루틴별 이번 달 달성률
+    const habitStats = habits.map(h => {
+      const count = thisMonthChecks.filter(c => c.habit_id === h.id).length;
+      return {
+        id: h.id, name: h.name, icon: h.icon,
+        rate: daysThisMonth === 0 ? 0 : Math.round((count / daysThisMonth) * 100),
+      };
+    });
+
+    // 최고 루틴
+    const bestHabit = habitStats.length > 0
+      ? habitStats.reduce((a, b) => a.rate >= b.rate ? a : b)
+      : null;
+
+    // 전체 기록 일수 (체크가 있는 날짜 수)
+    const totalDays = new Set(checks.map(c => c.checked_date)).size;
+
+    // 현재 연속 일수
+    const checkedDates = new Set(checks.map(c => c.checked_date));
+    let currentStreak = 0;
+    const d = new Date(now);
+    while (true) {
+      const ds = d.toISOString().slice(0, 10);
+      if (ds > today) { d.setDate(d.getDate() - 1); continue; }
+      if (!checkedDates.has(ds)) break;
+      currentStreak++;
+      d.setDate(d.getDate() - 1);
+    }
+
+    // 최고 연속 기록 (지난 365일)
+    let longestStreak = 0;
+    let streak = 0;
+    for (let i = 0; i < 365; i++) {
+      const d2 = new Date(now);
+      d2.setDate(now.getDate() - 364 + i);
+      if (checkedDates.has(d2.toISOString().slice(0, 10))) {
+        streak++;
+        longestStreak = Math.max(longestStreak, streak);
+      } else {
+        streak = 0;
+      }
+    }
+
+    return { completionRate, currentStreak, longestStreak, totalDays, habitStats, bestHabit };
+  }, [habits, checks]);
+
+  const { completionRate, currentStreak, longestStreak, totalDays, habitStats, bestHabit } = stats;
 
   const chartData = [
     { value: completionRate, color: "var(--blue)" },
-    { value: 100 - completionRate, color: "rgba(136,192,224,0.06)" },
+    { value: Math.max(0, 100 - completionRate), color: "rgba(136,192,224,0.06)" },
   ];
 
   return (
@@ -67,22 +124,27 @@ export function RightSidebar() {
 
       {/* 스탯 목록 */}
       <div>
-        <StatRow icon={Flame}      label="연속 일수"    value={`${currentStreak}일`}  delay={0.25} />
-        <StatRow icon={TrendingUp} label="최고 기록"    value={`${longestStreak}일`}  delay={0.3} />
-        <StatRow icon={Calendar}   label="기록 일수"    value={`${totalDays}일`}       delay={0.35} />
-        <StatRow icon={Star}       label="최고 루틴"    value={bestHabit}              delay={0.4} />
+        <StatRow icon={Flame}      label="연속 일수" value={`${currentStreak}일`}  delay={0.25} />
+        <StatRow icon={TrendingUp} label="최고 기록" value={`${longestStreak}일`}  delay={0.3}  />
+        <StatRow icon={Calendar}   label="기록 일수" value={`${totalDays}일`}       delay={0.35} />
+        <StatRow icon={Star}       label="최고 루틴"
+          value={bestHabit ? `${bestHabit.icon} ${bestHabit.name}` : "-"}
+          delay={0.4} />
       </div>
 
       {/* 루틴별 달성률 */}
       <div>
         <p className="label-text mb-3">루틴별 달성률</p>
         <div className="space-y-2.5">
+          {habitStats.length === 0 && (
+            <p className="text-xs" style={{ color: "var(--text-3)" }}>아직 루틴이 없어요.</p>
+          )}
           {habitStats.map((h, i) => (
-            <motion.div key={h.name}
+            <motion.div key={h.id}
               initial={{ opacity: 0 }} animate={{ opacity: 1 }}
               transition={{ delay: 0.45 + i * 0.05 }}
               className="flex items-center gap-2">
-              <span className="text-xs w-4 text-center">{h.icon}</span>
+              <span className="text-xs w-4 text-center flex-shrink-0">{h.icon}</span>
               <div className="flex-1 h-[3px] rounded-full overflow-hidden"
                 style={{ background: "rgba(136,192,224,0.07)" }}>
                 <motion.div className="h-full rounded-full"
@@ -91,7 +153,7 @@ export function RightSidebar() {
                   animate={{ width: `${h.rate}%` }}
                   transition={{ delay: 0.5 + i * 0.05, duration: 0.8, ease: "easeOut" }} />
               </div>
-              <span className="text-[9px] w-7 text-right tabular-nums"
+              <span className="text-[9px] w-7 text-right tabular-nums flex-shrink-0"
                 style={{ color: "var(--text-3)", fontFamily: "var(--font-en)" }}>
                 {h.rate}%
               </span>
