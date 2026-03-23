@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { Flame, TrendingUp, Calendar, Star } from "lucide-react";
 import { useHabits, toLocalDateStr } from "@/lib/habit-context";
+import { WolfCard } from "./WolfCard";
 
 const StatRow = ({ icon: Icon, label, value, delay }: {
   icon: any; label: string; value: string | number; delay: number;
@@ -95,6 +96,9 @@ export function RightSidebar() {
     <motion.div initial={{ opacity: 0, x: 12 }} animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.4, delay: 0.15 }}
       className="flex flex-col gap-5 h-full">
+      {/* 늑대 카드 */}
+      <WolfCard />
+
       {/* 헤더 */}
       <div>
         <p className="label-text mb-1.5">OVERALL EXP</p>
