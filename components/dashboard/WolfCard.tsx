@@ -71,25 +71,14 @@ export function WolfCard() {
   const isMax = stage.stage === 5;
 
   // 단계별 애니메이션
-  const wolfAnimate = stage.stage === 1
-    ? { y: [0, -5, 0] }                                      // 알: 둥실둥실
-    : stage.stage === 2
-    ? { rotate: [-4, 4, -4], y: [0, -2, 0] }                // 아기: 살랑살랑
-    : stage.stage === 3
-    ? { scaleX: [1, 1.04, 1], scaleY: [1, 0.97, 1] }        // 소년: 숨쉬기
-    : stage.stage === 4
-    ? { rotate: [-2, 2, -2], y: [0, -3, 0] }                // 성체: 앞뒤로 기울기
-    : { y: [0, -6, 0], scale: [1, 1.04, 1] };               // 전설: 위엄있게 부유
-
-  const wolfTransition = stage.stage === 1
-    ? { duration: 3.5, repeat: Infinity, ease: "easeInOut" }
-    : stage.stage === 2
-    ? { duration: 1.2, repeat: Infinity, ease: "easeInOut" }
-    : stage.stage === 3
-    ? { duration: 2.5, repeat: Infinity, ease: "easeInOut" }
-    : stage.stage === 4
-    ? { duration: 2.0, repeat: Infinity, ease: "easeInOut" }
-    : { duration: 4.0, repeat: Infinity, ease: "easeInOut" };
+  const WOLF_ANIM: Record<number, { animate: object; duration: number }> = {
+    1: { animate: { y: [0, -5, 0] },                          duration: 3.5 }, // 알: 둥실둥실
+    2: { animate: { rotate: [-4, 4, -4], y: [0, -2, 0] },    duration: 1.2 }, // 아기: 살랑살랑
+    3: { animate: { scaleX: [1, 1.04, 1], scaleY: [1, 0.97, 1] }, duration: 2.5 }, // 소년: 숨쉬기
+    4: { animate: { rotate: [-2, 2, -2], y: [0, -3, 0] },    duration: 2.0 }, // 성체: 기울기
+    5: { animate: { y: [0, -6, 0], scale: [1, 1.04, 1] },    duration: 4.0 }, // 전설: 부유
+  };
+  const { animate: wolfAnimate, duration: wolfDuration } = WOLF_ANIM[stage.stage] ?? WOLF_ANIM[1];
 
   return (
     <motion.div
@@ -117,8 +106,8 @@ export function WolfCard() {
       {/* 늑대 이미지 */}
       <motion.div
         className="relative flex items-center justify-center"
-        animate={wolfAnimate}
-        transition={wolfTransition}
+        animate={wolfAnimate as any}
+        transition={{ duration: wolfDuration, repeat: Infinity, ease: "easeInOut" }}
       >
         {/* 글로우 */}
         <div
