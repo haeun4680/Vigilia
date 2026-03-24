@@ -9,14 +9,7 @@ jobs:
   release:
     permissions:
       contents: write
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: windows-latest
-            args: ''
-
-    runs-on: ${{ matrix.platform }}
+    runs-on: windows-latest
 
     steps:
       - name: Checkout
@@ -50,3 +43,18 @@ jobs:
           releaseBody: '이 버전의 새로운 기능과 개선사항이 포함되어 있습니다.'
           releaseDraft: false
           prerelease: false
+
+      - name: Rename installer to fixed filename
+        shell: pwsh
+        run: |
+          $exe = Get-ChildItem -Path "src-tauri/target/release/bundle/nsis" -Filter "*.exe" | Select-Object -First 1
+          if ($exe) {
+            Copy-Item $exe.FullName -Destination "Vigilia-setup.exe"
+          }
+
+      - name: Upload fixed-name installer to release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: Vigilia-setup.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

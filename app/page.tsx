@@ -78,7 +78,7 @@ export default function Landing() {
             </span>
           </div>
           <div className="flex items-center gap-2">
-            <a href="https://github.com/haeun4680/Vigilia/releases/latest" target="_blank" rel="noopener noreferrer">
+            <a href="https://github.com/haeun4680/Vigilia/releases/latest/download/Vigilia-setup.exe" target="_blank" rel="noopener noreferrer">
               <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
                 className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium"
                 style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "var(--text-2)" }}>
@@ -328,7 +328,7 @@ export default function Landing() {
           </div>
 
           <div className="flex flex-col items-center gap-3">
-            <a href="https://github.com/haeun4680/Vigilia/releases/latest" target="_blank" rel="noopener noreferrer">
+            <a href="https://github.com/haeun4680/Vigilia/releases/latest/download/Vigilia-setup.exe" target="_blank" rel="noopener noreferrer">
               <motion.button
                 whileHover={{ scale: 1.05, boxShadow: "0 0 24px rgba(43,143,240,0.4)" }}
                 whileTap={{ scale: 0.97 }}
