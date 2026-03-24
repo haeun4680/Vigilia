@@ -13,6 +13,7 @@ import { HabitGrid } from "@/components/dashboard/HabitGrid";
 import { createClient } from "@/lib/supabase";
 import { HabitProvider, useHabits, toLocalDateStr } from "@/lib/habit-context";
 import { ChallengeProvider } from "@/lib/challenge-context";
+import { AutoUpdater } from "@/components/updater/AutoUpdater";
 
 type Tab = "dashboard" | "weekly" | "monthly";
 
@@ -302,5 +303,6 @@ export default function Home() {
       </ChallengeProvider>
       </HabitProvider>
     </div>
+    <AutoUpdater />
   );
 }
