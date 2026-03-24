@@ -302,7 +302,7 @@ export default function Home() {
         </div>
       </ChallengeProvider>
       </HabitProvider>
+      <AutoUpdater />
     </div>
-    <AutoUpdater />
   );
 }
