@@ -5,8 +5,8 @@ import { motion } from "framer-motion";
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { Flame, TrendingUp, Calendar, Star } from "lucide-react";
 import { useHabits, toLocalDateStr } from "@/lib/habit-context";
-import { WolfCard } from "./WolfCard";
 import { ChallengeCard } from "./ChallengeCard";
+import { CollectionPreview } from "./CollectionPreview";
 
 const StatRow = ({ icon: Icon, label, value, delay }: {
   icon: any; label: string; value: string | number; delay: number;
@@ -100,8 +100,8 @@ export function RightSidebar() {
       {/* 챌린지 카드 */}
       <ChallengeCard />
 
-      {/* 늑대 카드 */}
-      <WolfCard />
+      {/* 도감 */}
+      <CollectionPreview />
 
       {/* 헤더 */}
       <div>
