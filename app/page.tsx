@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Flame, Brain, Trophy } from "lucide-react";
+import { ArrowRight, Flame, Brain, Trophy, Download, Monitor } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 
 const SHOWCASE_ANIMALS = [
@@ -77,13 +77,22 @@ export default function Landing() {
               Vigilia
             </span>
           </div>
-          <Link href="/login">
-            <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium"
-              style={{ background: "rgba(43,143,240,0.1)", border: "1px solid rgba(43,143,240,0.3)", color: "var(--blue)" }}>
-              시작하기 <ArrowRight className="w-3.5 h-3.5" />
-            </motion.button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <a href="https://github.com/haeun4680/Vigilia/releases/latest" target="_blank" rel="noopener noreferrer">
+              <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium"
+                style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.1)", color: "var(--text-2)" }}>
+                <Download className="w-3.5 h-3.5" /> PC 다운로드
+              </motion.button>
+            </a>
+            <Link href="/login">
+              <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium"
+                style={{ background: "rgba(43,143,240,0.1)", border: "1px solid rgba(43,143,240,0.3)", color: "var(--blue)" }}>
+                시작하기 <ArrowRight className="w-3.5 h-3.5" />
+              </motion.button>
+            </Link>
+          </div>
         </motion.nav>
 
         {/* ── Hero ── */}
@@ -283,6 +292,55 @@ export default function Landing() {
             ))}
           </div>
         </section>
+
+        {/* ── PC 다운로드 ── */}
+        <motion.section
+          initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }} transition={{ duration: 0.7 }}
+          className="dawn-card p-10 flex flex-col sm:flex-row items-center gap-8"
+          style={{ borderColor: "rgba(43,143,240,0.25)", background: "rgba(43,143,240,0.04)" }}
+        >
+          <div className="flex flex-col items-center sm:items-start gap-1">
+            <motion.div
+              animate={{ y: [0, -4, 0] }}
+              transition={{ duration: 3.5, repeat: Infinity, ease: "easeInOut" }}
+              className="w-16 h-16 rounded-2xl flex items-center justify-center"
+              style={{ background: "rgba(43,143,240,0.12)", border: "1px solid rgba(43,143,240,0.3)" }}
+            >
+              <Monitor className="w-8 h-8" style={{ color: "var(--blue)" }} />
+            </motion.div>
+          </div>
+
+          <div className="flex-1 text-center sm:text-left space-y-2">
+            <div className="flex items-center justify-center sm:justify-start gap-2">
+              <p className="text-base font-bold" style={{ color: "var(--text-1)" }}>Vigilia PC 앱</p>
+              <span className="text-[10px] px-2 py-0.5 rounded-full font-bold"
+                style={{ background: "rgba(43,143,240,0.12)", color: "var(--blue)", border: "1px solid rgba(43,143,240,0.25)" }}>
+                Windows
+              </span>
+            </div>
+            <p className="text-sm leading-relaxed" style={{ color: "var(--text-3)" }}>
+              웹 브라우저 없이 더 빠르고 쾌적하게. PC 앱으로 언제든 바탕화면에서 바로 Vigilia를 실행하세요.
+            </p>
+            <p className="text-xs" style={{ color: "var(--text-4)" }}>
+              업데이트가 있으면 앱 안에서 자동으로 알려드려요 ✨
+            </p>
+          </div>
+
+          <div className="flex flex-col items-center gap-3">
+            <a href="https://github.com/haeun4680/Vigilia/releases/latest" target="_blank" rel="noopener noreferrer">
+              <motion.button
+                whileHover={{ scale: 1.05, boxShadow: "0 0 24px rgba(43,143,240,0.4)" }}
+                whileTap={{ scale: 0.97 }}
+                className="flex items-center gap-2 px-6 py-3 rounded-xl text-sm font-semibold whitespace-nowrap"
+                style={{ background: "var(--blue)", color: "#fff", boxShadow: "0 0 16px rgba(43,143,240,0.25)" }}
+              >
+                <Download className="w-4 h-4" /> 무료 다운로드
+              </motion.button>
+            </a>
+            <p className="text-[10px]" style={{ color: "var(--text-4)" }}>Windows 10 / 11 · 무료</p>
+          </div>
+        </motion.section>
 
         {/* ── 프리미엄 힌트 ── */}
         <motion.section
