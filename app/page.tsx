@@ -131,17 +131,19 @@ export default function Landing() {
             initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.7 }}
             className="space-y-4"
           >
-            <p className="label-text tracking-[0.3em]">ROUTINE × COLLECTION</p>
+            <p className="label-text tracking-[0.3em]">ROUTINE × COMPANION</p>
             <h1 className="text-4xl sm:text-5xl font-bold tracking-tight leading-tight"
               style={{ color: "var(--text-1)" }}>
-              루틴이 <span style={{ color: "var(--blue)" }}>동물</span>이 된다
+              작은 습관으로<br />
+              <span style={{ color: "var(--blue)" }}>특별한 동반자</span>를<br />
+              만나보세요
             </h1>
             <p className="text-base font-medium" style={{ color: "var(--text-2)" }}>
-              매일의 루틴을 지켜내고, 달빛 동물들을 수집하세요
+              루틴을 지킬수록, 새로운 동반자가 당신 곁에 찾아와요
             </p>
             <p className="text-sm max-w-[420px] mx-auto leading-relaxed" style={{ color: "var(--text-3)" }}>
-              7일을 지키면 병아리, 90일이면 늑대, 365일이면 전설의 유니콘.<br />
-              꾸준함이 쌓일수록 더 희귀한 동물이 당신을 기다려요.
+              7일을 함께하면 병아리, 90일이면 늑대, 365일이면 전설의 유니콘.<br />
+              꾸준함이 쌓일수록 더 특별한 동반자가 기다리고 있어요.
             </p>
           </motion.div>
 
@@ -184,7 +186,7 @@ export default function Landing() {
             viewport={{ once: true, margin: "-60px" }} className="text-center space-y-2"
           >
             <p className="label-text tracking-[0.25em]">HOW IT WORKS</p>
-            <h2 className="text-2xl font-bold" style={{ color: "var(--text-1)" }}>4단계로 동물을 키워보세요</h2>
+            <h2 className="text-2xl font-bold" style={{ color: "var(--text-1)" }}>4단계로 동반자와 함께하세요</h2>
           </motion.div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -213,7 +215,7 @@ export default function Landing() {
             viewport={{ once: true, margin: "-60px" }} className="text-center space-y-2"
           >
             <p className="label-text tracking-[0.25em]">COLLECTION</p>
-            <h2 className="text-2xl font-bold" style={{ color: "var(--text-1)" }}>얼마나 꾸준하냐에 따라 달라져요</h2>
+            <h2 className="text-2xl font-bold" style={{ color: "var(--text-1)" }}>꾸준할수록 더 특별한 동반자가 찾아와요</h2>
           </motion.div>
 
           <div className="space-y-3">
@@ -239,7 +241,7 @@ export default function Landing() {
                     </span>
                   </div>
                   <p className="text-[11px]" style={{ color: "var(--text-3)" }}>
-                    {a.days}일 연속 달성 시 획득 · 같은 등급에 여러 동물 수록
+                    {a.days}일을 함께하면 만날 수 있어요 · 같은 등급에 여러 동반자 수록
                   </p>
                 </div>
                 <div className="text-right">
@@ -315,10 +317,10 @@ export default function Landing() {
           </motion.div>
           <div className="space-y-2">
             <h2 className="text-2xl font-bold" style={{ color: "var(--text-1)" }}>
-              첫 번째 동물을 수집해보세요
+              첫 번째 동반자를 만나보세요
             </h2>
             <p className="text-sm" style={{ color: "var(--text-3)" }}>
-              7일만 지켜도 병아리가 생겨요. 오늘 시작하세요.
+              7일만 함께해도 병아리가 당신 곁에 찾아와요.
             </p>
           </div>
           <Link href="/login">
@@ -335,7 +337,7 @@ export default function Landing() {
         {/* ── 푸터 ── */}
         <footer className="flex items-center justify-center pb-8">
           <p className="text-[11px]" style={{ color: "var(--text-4)" }}>
-            © 2025 Vigilia — 루틴이 동물이 되는 곳
+            © 2025 Vigilia — 작은 습관으로 특별한 동반자를 만나는 곳
           </p>
         </footer>
 
