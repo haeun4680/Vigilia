@@ -1,63 +1,34 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect } from "react";
+import { motion } from "framer-motion";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Sparkles, BarChart2, CalendarDays, Brain, ArrowRight, Check } from "lucide-react";
+import { ArrowRight, Flame, Brain, Trophy } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 
-const features = [
-  {
-    icon: CalendarDays,
-    title: "주간 · 월간 루틴 기록",
-    desc: "매일의 루틴을 체크하고, 한눈에 달성률을 확인해요.",
-    color: "var(--blue)",
-    bg: "rgba(43,143,240,0.06)",
-    border: "rgba(43,143,240,0.2)",
-  },
-  {
-    icon: BarChart2,
-    title: "습관 성장 그래프",
-    desc: "이번 주 루틴 흐름을 시각적으로 파악할 수 있어요.",
-    color: "var(--blue-bright)",
-    bg: "rgba(112,192,255,0.06)",
-    border: "rgba(112,192,255,0.2)",
-  },
-  {
-    icon: Brain,
-    title: "AI 루틴 코치",
-    desc: "Gemini AI가 내 루틴 데이터를 분석해 실질적인 조언을 드려요.",
-    color: "var(--lavender)",
-    bg: "rgba(96,112,192,0.06)",
-    border: "rgba(96,112,192,0.2)",
-  },
-  {
-    icon: Sparkles,
-    title: "연속 달성 스트릭",
-    desc: "꾸준히 이어지는 날들이 쌓여 당신의 루틴이 됩니다.",
-    color: "var(--amber)",
-    bg: "rgba(160,136,64,0.06)",
-    border: "rgba(160,136,64,0.2)",
-  },
+const SHOWCASE_ANIMALS = [
+  { emoji: "🐣", name: "병아리",      rarity: "COMMON",    color: "rgba(180,180,180,0.9)", days: 7   },
+  { emoji: "🐱", name: "고양이",      rarity: "UNCOMMON",  color: "rgba(80,200,120,0.9)",  days: 30  },
+  { emoji: "🐺", name: "늑대",        rarity: "RARE",      color: "rgba(43,143,240,0.9)",  days: 90  },
+  { emoji: "🦅", name: "독수리",      rarity: "EPIC",      color: "rgba(160,80,240,0.9)",  days: 180 },
+  { emoji: "🦄", name: "유니콘",      rarity: "LEGENDARY", color: "rgba(255,200,50,0.9)",  days: 365 },
 ];
 
-const stats = [
-  { value: "21일", label: "습관 형성까지" },
-  { value: "4가지", label: "핵심 루틴 트래킹" },
-  { value: "AI", label: "맞춤 분석 코치" },
+const HOW_IT_WORKS = [
+  { step: "01", title: "루틴 설정",     desc: "매일 지키고 싶은 루틴을 등록하세요.",            emoji: "📋" },
+  { step: "02", title: "동물 선택",     desc: "도전 기간을 정하고 키울 동물을 선택하세요.",      emoji: "🐾" },
+  { step: "03", title: "루틴 달성",     desc: "매일 루틴을 완료하며 도전을 이어가세요.",         emoji: "✅" },
+  { step: "04", title: "동물 획득!",    desc: "기간을 채우면 선택한 동물이 도감에 추가돼요.",    emoji: "🎉" },
 ];
 
-const previewHabits = [
-  { icon: "🧘", name: "명상",   checks: [true,  true,  true,  false, true,  true,  false] },
-  { icon: "📚", name: "독서",   checks: [true,  false, true,  true,  true,  false, false] },
-  { icon: "🏃", name: "운동",   checks: [false, true,  true,  true,  false, true,  true ] },
-  { icon: "💊", name: "비타민", checks: [true,  true,  false, true,  true,  true,  false] },
+const FEATURES = [
+  { icon: Trophy, title: "동물 수집 도감",   desc: "챌린지를 완료할 때마다 새로운 동물을 수집해요. 희귀할수록 오래 걸리지만 그만큼 특별해요.", color: "rgba(255,200,50,0.9)",  bg: "rgba(255,200,50,0.06)",  border: "rgba(255,200,50,0.2)"  },
+  { icon: Flame,  title: "연속 달성 챌린지", desc: "7일부터 365일까지, 나만의 페이스로 도전하세요. 꾸준함이 희귀 동물로 보답받아요.",         color: "rgba(43,143,240,0.9)",  bg: "rgba(43,143,240,0.06)",  border: "rgba(43,143,240,0.2)"  },
+  { icon: Brain,  title: "AI 루틴 코치",     desc: "Gemini AI가 내 루틴 데이터를 분석하고 더 나은 습관 형성을 위한 조언을 드려요.",           color: "rgba(160,80,240,0.9)",  bg: "rgba(160,80,240,0.06)",  border: "rgba(160,80,240,0.2)"  },
 ];
-const previewDays = ["월","화","수","목","금","토","일"];
 
 export default function Landing() {
-  const [moonHovered, setMoonHovered] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -68,358 +39,234 @@ export default function Landing() {
   }, []);
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--bg)" }}>
+    <div className="min-h-screen overflow-x-hidden" style={{ background: "var(--bg)" }}>
 
       {/* 배경 앰비언트 */}
       <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
-        <div className="absolute top-[-10%] right-[15%] w-[600px] h-[600px] rounded-full blur-[150px]"
-          style={{ background: "rgba(30,110,220,0.35)" }} />
-        <div className="absolute top-[-5%] right-[20%] w-[300px] h-[300px] rounded-full blur-[90px]"
-          style={{ background: "rgba(60,150,230,0.28)" }} />
-        <div className="absolute bottom-[-15%] left-[15%] w-[700px] h-[500px] rounded-full blur-[180px]"
-          style={{ background: "rgba(20,80,200,0.22)" }} />
-        <div className="absolute top-[40%] left-[-5%] w-[400px] h-[200px] rounded-full blur-[110px]"
-          style={{ background: "rgba(15,60,180,0.18)", transform: "rotate(-20deg)" }} />
-        {/* 별 */}
+        <div className="absolute top-[-10%] right-[10%] w-[700px] h-[700px] rounded-full blur-[180px]"
+          style={{ background: "rgba(30,110,220,0.30)" }} />
+        <div className="absolute bottom-[-10%] left-[10%] w-[600px] h-[500px] rounded-full blur-[160px]"
+          style={{ background: "rgba(20,80,200,0.20)" }} />
+        <div className="absolute top-[40%] right-[-5%] w-[400px] h-[300px] rounded-full blur-[130px]"
+          style={{ background: "rgba(160,80,240,0.12)" }} />
         {[
           { top:"5%",  left:"8%",  dur:"3.2s", delay:"0s"   },
-          { top:"10%", left:"42%", dur:"2.8s", delay:"0.8s" },
-          { top:"7%",  left:"68%", dur:"4.1s", delay:"1.5s" },
-          { top:"18%", left:"85%", dur:"2.5s", delay:"0.3s" },
-          { top:"32%", left:"5%",  dur:"3.7s", delay:"2.1s" },
-          { top:"55%", left:"92%", dur:"2.9s", delay:"1.0s" },
-          { top:"72%", left:"12%", dur:"3.5s", delay:"0.6s" },
-          { top:"85%", left:"55%", dur:"4.3s", delay:"1.8s" },
-          { top:"22%", left:"55%", dur:"2.7s", delay:"2.5s" },
-          { top:"48%", left:"75%", dur:"3.9s", delay:"0.4s" },
+          { top:"12%", left:"45%", dur:"2.8s", delay:"0.8s" },
+          { top:"8%",  left:"72%", dur:"4.1s", delay:"1.5s" },
+          { top:"20%", left:"88%", dur:"2.5s", delay:"0.3s" },
+          { top:"35%", left:"4%",  dur:"3.7s", delay:"2.1s" },
+          { top:"60%", left:"94%", dur:"2.9s", delay:"1.0s" },
+          { top:"75%", left:"15%", dur:"3.5s", delay:"0.6s" },
+          { top:"88%", left:"60%", dur:"4.3s", delay:"1.8s" },
         ].map((s, i) => (
           <div key={i} className="star-twinkle"
-            style={{ top: s.top, left: s.left,
-              ["--twinkle-dur" as any]: s.dur, animationDelay: s.delay }} />
+            style={{ top: s.top, left: s.left, ["--twinkle-dur" as any]: s.dur, animationDelay: s.delay }} />
         ))}
       </div>
 
-      <div className="relative max-w-[960px] mx-auto px-6 py-10 space-y-24" style={{ zIndex: 1 }}>
+      <div className="relative max-w-[960px] mx-auto px-6 py-10 space-y-28" style={{ zIndex: 1 }}>
 
-        {/* ── 헤더 nav ── */}
+        {/* ── Nav ── */}
         <motion.nav
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }}
           className="flex items-center justify-between"
         >
           <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full"
-              style={{ background: "var(--blue)", boxShadow: "0 0 8px var(--blue)" }} />
-            <span className="text-base font-semibold tracking-wider"
-              style={{ color: "var(--text-1)", fontFamily: "var(--font-en)" }}>
+            <div className="w-2 h-2 rounded-full" style={{ background: "var(--blue)", boxShadow: "0 0 8px var(--blue)" }} />
+            <span className="text-base font-semibold tracking-wider" style={{ color: "var(--text-1)", fontFamily: "var(--font-en)" }}>
               Vigilia
             </span>
           </div>
           <Link href="/login">
-            <motion.button
-              whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
+            <motion.button whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
               className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium"
-              style={{
-                background: "rgba(43,143,240,0.1)",
-                border: "1px solid rgba(43,143,240,0.3)",
-                color: "var(--blue)",
-              }}>
-              앱 시작하기 <ArrowRight className="w-3.5 h-3.5" />
+              style={{ background: "rgba(43,143,240,0.1)", border: "1px solid rgba(43,143,240,0.3)", color: "var(--blue)" }}>
+              시작하기 <ArrowRight className="w-3.5 h-3.5" />
             </motion.button>
           </Link>
         </motion.nav>
 
         {/* ── Hero ── */}
-        <section className="flex flex-col items-center text-center gap-8 pt-12">
+        <section className="flex flex-col items-center text-center gap-10 pt-8">
 
-          {/* 달 + 미리보기 */}
+          {/* 동물 쇼케이스 */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.85 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ duration: 1.0, ease: "easeOut" }}
-            className="relative flex flex-col items-center"
-            onMouseEnter={() => setMoonHovered(true)}
-            onMouseLeave={() => setMoonHovered(false)}
-            style={{ cursor: "pointer" }}
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.8 }}
+            className="flex items-end justify-center gap-3 sm:gap-5"
           >
-            {/* 달 본체 */}
-            <motion.div
-              animate={{ scale: moonHovered ? 1.08 : 1, boxShadow: moonHovered
-                ? "0 0 60px rgba(43,143,240,0.55), 0 0 120px rgba(43,143,240,0.25), inset 0 1px 0 rgba(200,235,255,0.5)"
-                : "0 0 40px rgba(43,143,240,0.30), 0 0  80px rgba(43,143,240,0.12), inset 0 1px 0 rgba(180,225,255,0.3)" }}
-              transition={{ duration: 0.4, ease: "easeOut" }}
-              className="relative w-36 h-36 rounded-full overflow-hidden"
-              style={{
-                background: `
-                  radial-gradient(circle at 32% 28%, rgba(230,245,255,0.95) 0%,  rgba(180,220,255,0.75) 12%, transparent 35%),
-                  radial-gradient(circle at 70% 65%, rgba(60,110,190,0.35)  0%,  transparent 28%),
-                  radial-gradient(circle at 50% 50%, rgba(140,195,250,0.90) 0%,  rgba(80,145,230,0.65) 38%, rgba(35,85,185,0.45) 65%, rgba(15,45,130,0.25) 85%, transparent 100%)
-                `,
-                border: "1px solid rgba(160,215,255,0.35)",
-              }}
-            >
-              {/* 크레이터들 */}
-              <div className="absolute top-[52%] left-[55%] w-5 h-5 rounded-full"
-                style={{ background: "rgba(40,90,180,0.28)", boxShadow: "inset 1px 1px 3px rgba(20,60,150,0.4)" }} />
-              <div className="absolute top-[30%] left-[62%] w-3 h-3 rounded-full"
-                style={{ background: "rgba(50,100,190,0.22)", boxShadow: "inset 1px 1px 2px rgba(30,70,160,0.35)" }} />
-              <div className="absolute top-[65%] left-[25%] w-2.5 h-2.5 rounded-full"
-                style={{ background: "rgba(45,95,185,0.20)", boxShadow: "inset 1px 1px 2px rgba(25,65,155,0.3)" }} />
-              <div className="absolute top-[40%] left-[20%] w-2 h-2 rounded-full"
-                style={{ background: "rgba(55,105,195,0.18)" }} />
-              {/* 표면 음영 */}
-              <div className="absolute inset-0 rounded-full"
-                style={{ background: "radial-gradient(circle at 68% 62%, rgba(20,55,160,0.22) 0%, transparent 55%)" }} />
-              {/* 밝은 하이라이트 */}
-              <div className="absolute top-[14%] left-[20%] w-10 h-5 rounded-full blur-[5px]"
-                style={{ background: "rgba(220,240,255,0.45)" }} />
-              <div className="absolute top-[22%] left-[28%] w-5 h-2.5 rounded-full blur-[3px]"
-                style={{ background: "rgba(240,250,255,0.55)" }} />
-            </motion.div>
-
-            {/* 달무리 글로우 */}
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-52 h-52 rounded-full pointer-events-none"
-              style={{ background: "radial-gradient(circle, rgba(43,143,240,0.12) 0%, transparent 70%)" }} />
-
-            {/* 미리보기 슬라이드 */}
-            <AnimatePresence>
-              {moonHovered && (
-                <motion.div
-                  initial={{ opacity: 0, y: -8, scale: 0.96 }}
-                  animate={{ opacity: 1, y: 0,  scale: 1    }}
-                  exit={{    opacity: 0, y: -8, scale: 0.96 }}
-                  transition={{ duration: 0.35, ease: [0.25, 0.8, 0.25, 1] }}
-                  className="absolute top-[calc(100%+16px)] left-1/2 -translate-x-1/2 dawn-card p-4"
-                  style={{ width: 300, zIndex: 10 }}
+            {SHOWCASE_ANIMALS.map((a, i) => {
+              const sizes = [52, 64, 80, 64, 52];
+              const delays = [0.4, 0.25, 0, 0.25, 0.4];
+              const floatDelays = [0.4, 0.2, 0, 0.6, 0.8];
+              return (
+                <motion.div key={a.emoji} className="flex flex-col items-center gap-2"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: delays[i], duration: 0.6 }}
                 >
-                  {/* 미니 헤더 */}
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-1.5">
-                      <div className="w-1.5 h-1.5 rounded-full status-dot" />
-                      <span className="label-text">이번 주 루틴</span>
-                    </div>
-                    <span className="text-[10px]" style={{ color: "var(--blue)", fontFamily: "var(--font-en)" }}>74%</span>
-                  </div>
-
-                  {/* 요일 헤더 */}
-                  <div className="grid mb-1.5" style={{ gridTemplateColumns: "80px repeat(7, 1fr)" }}>
-                    <div />
-                    {previewDays.map(d => (
-                      <div key={d} className="text-center text-[9px] font-medium tracking-wider"
-                        style={{ color: d === "화" ? "var(--blue)" : "var(--text-4)" }}>{d}</div>
-                    ))}
-                  </div>
-
-                  {/* 루틴 행 */}
-                  <div className="space-y-1.5">
-                    {previewHabits.map((h, ri) => (
-                      <motion.div
-                        key={ri}
-                        initial={{ opacity: 0, x: -6 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: ri * 0.055 }}
-                        className="grid items-center"
-                        style={{ gridTemplateColumns: "80px repeat(7, 1fr)" }}
-                      >
-                        <span className="text-[11px] flex items-center gap-1" style={{ color: "var(--text-2)" }}>
-                          <span>{h.icon}</span>{h.name}
-                        </span>
-                        {h.checks.map((c, ci) => (
-                          <div key={ci} className="flex justify-center">
-                            <div className="w-5 h-5 rounded-md flex items-center justify-center"
-                              style={{
-                                background: c ? "rgba(43,143,240,0.14)" : "transparent",
-                                border: c ? "1px solid rgba(43,143,240,0.38)" : "1px solid var(--border-2)",
-                              }}>
-                              {c && <Check className="w-2.5 h-2.5" style={{ color: "var(--blue)" }} />}
-                            </div>
-                          </div>
-                        ))}
-                      </motion.div>
-                    ))}
-                  </div>
-
-                  {/* 하단 바 */}
-                  <div className="mt-3 pt-3" style={{ borderTop: "1px solid var(--border-2)" }}>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="label-text">월간 달성률</span>
-                      <span className="text-[10px] font-medium" style={{ color: "var(--blue)" }}>74%</span>
-                    </div>
-                    <div className="h-1 rounded-full overflow-hidden" style={{ background: "rgba(43,143,240,0.08)" }}>
-                      <motion.div className="h-full rounded-full"
-                        initial={{ width: 0 }}
-                        animate={{ width: "74%" }}
-                        transition={{ duration: 0.6, delay: 0.2 }}
-                        style={{ background: "var(--blue)", boxShadow: "0 0 6px rgba(43,143,240,0.5)" }} />
-                    </div>
-                  </div>
+                  <motion.div
+                    animate={{ y: [0, -6, 0] }}
+                    transition={{ duration: 3 + i * 0.3, repeat: Infinity, ease: "easeInOut", delay: floatDelays[i] }}
+                    className="flex items-center justify-center rounded-2xl dawn-card"
+                    style={{
+                      width: sizes[i], height: sizes[i],
+                      fontSize: sizes[i] * 0.5,
+                      boxShadow: `0 0 20px ${a.color}40, 0 0 40px ${a.color}15`,
+                      border: `1px solid ${a.color}30`,
+                    }}
+                  >
+                    {a.emoji}
+                  </motion.div>
+                  <span className="text-[8px] font-bold px-1.5 py-0.5 rounded-full"
+                    style={{ color: a.color, background: `${a.color}15`, border: `1px solid ${a.color}30` }}>
+                    {a.rarity}
+                  </span>
                 </motion.div>
-              )}
-            </AnimatePresence>
+              );
+            })}
           </motion.div>
 
+          {/* 타이틀 */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.2 }}
+            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3, duration: 0.7 }}
             className="space-y-4"
           >
-            <p className="label-text tracking-[0.3em]">HABIT TRACKER</p>
-            <h1 className="text-5xl sm:text-6xl font-bold tracking-tight leading-tight"
-              style={{ color: "var(--text-1)", fontFamily: "var(--font-en)" }}>
-              Vigilia
+            <p className="label-text tracking-[0.3em]">ROUTINE × COLLECTION</p>
+            <h1 className="text-4xl sm:text-5xl font-bold tracking-tight leading-tight"
+              style={{ color: "var(--text-1)" }}>
+              루틴이 <span style={{ color: "var(--blue)" }}>동물</span>이 된다
             </h1>
-            <p className="text-lg font-medium" style={{ color: "var(--text-2)" }}>
-              달빛 아래, 매일의 루틴을 지켜내는 곳
+            <p className="text-base font-medium" style={{ color: "var(--text-2)" }}>
+              매일의 루틴을 지켜내고, 달빛 동물들을 수집하세요
             </p>
-            <p className="text-sm max-w-[440px] mx-auto leading-relaxed" style={{ color: "var(--text-3)" }}>
-              작은 습관이 쌓여 큰 변화가 됩니다.<br />
-              Vigilia와 함께 나만의 루틴을 만들어가세요.
+            <p className="text-sm max-w-[420px] mx-auto leading-relaxed" style={{ color: "var(--text-3)" }}>
+              7일을 지키면 병아리, 90일이면 늑대, 365일이면 전설의 유니콘.<br />
+              꾸준함이 쌓일수록 더 희귀한 동물이 당신을 기다려요.
             </p>
           </motion.div>
 
           <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.45 }}
-            className="flex items-center gap-4"
+            initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.5, duration: 0.6 }}
           >
             <Link href="/login">
               <motion.button
-                whileHover={{ scale: 1.05, boxShadow: "0 0 30px rgba(43,143,240,0.4)" }}
+                whileHover={{ scale: 1.05, boxShadow: "0 0 30px rgba(43,143,240,0.45)" }}
                 whileTap={{ scale: 0.97 }}
-                className="flex items-center gap-2 px-7 py-3.5 rounded-2xl text-sm font-semibold"
-                style={{
-                  background: "var(--blue)",
-                  color: "#fff",
-                  boxShadow: "0 0 20px rgba(43,143,240,0.35)",
-                }}>
-                지금 시작하기 <ArrowRight className="w-4 h-4" />
+                className="flex items-center gap-2 px-8 py-3.5 rounded-2xl text-sm font-semibold"
+                style={{ background: "var(--blue)", color: "#fff", boxShadow: "0 0 20px rgba(43,143,240,0.3)" }}>
+                무료로 시작하기 <ArrowRight className="w-4 h-4" />
               </motion.button>
             </Link>
           </motion.div>
 
           {/* 스탯 */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.7 }}
-            className="flex items-center gap-8 pt-4"
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.7 }}
+            className="flex items-center gap-8 pt-2"
           >
-            {stats.map((s, i) => (
+            {[
+              { value: "25+", label: "수집 가능한 동물" },
+              { value: "5단계", label: "희귀도 등급" },
+              { value: "AI", label: "맞춤 루틴 코치" },
+            ].map((s, i) => (
               <div key={i} className="text-center">
-                <p className="text-2xl font-bold tabular-nums"
-                  style={{ color: "var(--blue)", fontFamily: "var(--font-en)" }}>{s.value}</p>
+                <p className="text-xl font-bold tabular-nums" style={{ color: "var(--blue)", fontFamily: "var(--font-en)" }}>{s.value}</p>
                 <p className="text-[11px] mt-0.5" style={{ color: "var(--text-3)" }}>{s.label}</p>
               </div>
             ))}
           </motion.div>
         </section>
 
-        {/* ── 앱 미리보기 ── */}
-        <motion.section
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-80px" }}
-          transition={{ duration: 0.7 }}
-        >
-          <div className="dawn-card p-1.5 overflow-hidden">
-            {/* 가짜 브라우저 탑바 */}
-            <div className="flex items-center gap-1.5 px-4 py-3"
-              style={{ borderBottom: "1px solid var(--border-2)" }}>
-              <div className="w-2.5 h-2.5 rounded-full" style={{ background: "rgba(255,100,100,0.4)" }} />
-              <div className="w-2.5 h-2.5 rounded-full" style={{ background: "rgba(255,200,80,0.4)" }} />
-              <div className="w-2.5 h-2.5 rounded-full" style={{ background: "rgba(80,200,120,0.4)" }} />
-              <div className="ml-4 px-4 py-0.5 rounded-md text-[11px]"
-                style={{ background: "rgba(136,192,224,0.06)", border: "1px solid var(--border-2)", color: "var(--text-3)" }}>
-                vigilia.vercel.app/dashboard
-              </div>
-            </div>
-            {/* 미리보기 내용 */}
-            <div className="p-6 space-y-3">
-              {/* 헤더 바 */}
-              <div className="h-12 rounded-xl" style={{ background: "rgba(43,143,240,0.05)", border: "1px solid var(--border-2)" }}>
-                <div className="flex items-center justify-between h-full px-4">
-                  <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: "var(--blue)", boxShadow: "0 0 6px var(--blue)" }} />
-                    <div className="h-2 w-16 rounded-full" style={{ background: "var(--border-1)" }} />
-                  </div>
-                  <div className="flex gap-2">
-                    <div className="h-6 w-20 rounded-lg" style={{ background: "rgba(43,143,240,0.12)", border: "1px solid rgba(43,143,240,0.2)" }} />
-                    <div className="h-6 w-20 rounded-lg" style={{ background: "transparent" }} />
-                  </div>
-                  <div className="flex gap-3">
-                    <div className="h-2 w-10 rounded-full" style={{ background: "var(--border-1)" }} />
-                    <div className="h-2 w-10 rounded-full" style={{ background: "var(--blue)", opacity: 0.5 }} />
-                  </div>
+        {/* ── 이용 방법 ── */}
+        <section className="space-y-10">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-60px" }} className="text-center space-y-2"
+          >
+            <p className="label-text tracking-[0.25em]">HOW IT WORKS</p>
+            <h2 className="text-2xl font-bold" style={{ color: "var(--text-1)" }}>4단계로 동물을 키워보세요</h2>
+          </motion.div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            {HOW_IT_WORKS.map((step, i) => (
+              <motion.div key={i}
+                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-40px" }} transition={{ delay: i * 0.1 }}
+                className="dawn-card p-5 space-y-3 relative overflow-hidden"
+              >
+                <div className="absolute top-3 right-4 text-[40px] font-black opacity-[0.04]"
+                  style={{ color: "var(--blue)", fontFamily: "var(--font-en)" }}>{step.step}</div>
+                <span className="text-3xl">{step.emoji}</span>
+                <div>
+                  <p className="text-sm font-semibold mb-1" style={{ color: "var(--text-1)" }}>{step.title}</p>
+                  <p className="text-xs leading-relaxed" style={{ color: "var(--text-3)" }}>{step.desc}</p>
                 </div>
-              </div>
-              {/* 차트 영역 */}
-              <div className="h-28 rounded-xl flex items-end gap-1.5 px-4 pb-4 pt-3"
-                style={{ background: "rgba(43,143,240,0.03)", border: "1px solid var(--border-2)" }}>
-                <div className="flex-1 h-full flex items-end gap-1">
-                  {[55, 70, 48, 82, 65, 90, 74].map((h, i) => (
-                    <motion.div key={i}
-                      initial={{ height: 0 }}
-                      whileInView={{ height: `${h}%` }}
-                      viewport={{ once: true }}
-                      transition={{ delay: i * 0.05, duration: 0.5, ease: "easeOut" }}
-                      className="flex-1 rounded-t-sm"
-                      style={{ background: `rgba(43,143,240,${0.15 + h/400})`, minHeight: 4 }} />
-                  ))}
-                </div>
-              </div>
-              {/* 루틴 행 */}
-              <div className="space-y-1.5">
-                {[
-                  { name: "🧘 명상", checks: [1,1,1,0,1,1,0] },
-                  { name: "📚 독서", checks: [1,0,1,1,1,0,0] },
-                  { name: "🏃 운동", checks: [0,1,1,1,0,1,1] },
-                ].map((row, ri) => (
-                  <div key={ri} className="flex items-center gap-3 px-3 py-2 rounded-lg"
-                    style={{ background: "rgba(43,143,240,0.03)", border: "1px solid var(--border-2)" }}>
-                    <span className="text-xs w-20 truncate" style={{ color: "var(--text-2)" }}>{row.name}</span>
-                    <div className="flex gap-1.5">
-                      {row.checks.map((c, ci) => (
-                        <div key={ci} className="w-5 h-5 rounded-md flex items-center justify-center"
-                          style={{
-                            background: c ? "rgba(43,143,240,0.15)" : "transparent",
-                            border: c ? "1px solid rgba(43,143,240,0.4)" : "1px solid var(--border-2)",
-                          }}>
-                          {c ? <Check className="w-2.5 h-2.5" style={{ color: "var(--blue)" }} /> : null}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
+              </motion.div>
+            ))}
           </div>
-        </motion.section>
+        </section>
+
+        {/* ── 동물 등급 표 ── */}
+        <section className="space-y-10">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-60px" }} className="text-center space-y-2"
+          >
+            <p className="label-text tracking-[0.25em]">COLLECTION</p>
+            <h2 className="text-2xl font-bold" style={{ color: "var(--text-1)" }}>얼마나 꾸준하냐에 따라 달라져요</h2>
+          </motion.div>
+
+          <div className="space-y-3">
+            {SHOWCASE_ANIMALS.map((a, i) => (
+              <motion.div key={i}
+                initial={{ opacity: 0, x: -20 }} whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true, margin: "-30px" }} transition={{ delay: i * 0.08 }}
+                className="dawn-card px-5 py-4 flex items-center gap-4"
+                style={{ borderColor: `${a.color}20` }}
+              >
+                <motion.span className="text-3xl"
+                  animate={{ y: [0, -3, 0] }}
+                  transition={{ duration: 2.5 + i * 0.3, repeat: Infinity, ease: "easeInOut" }}
+                  style={{ filter: `drop-shadow(0 0 6px ${a.color})` }}>
+                  {a.emoji}
+                </motion.span>
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="text-sm font-bold" style={{ color: "var(--text-1)" }}>{a.name}</span>
+                    <span className="text-[9px] font-bold px-2 py-0.5 rounded-full"
+                      style={{ color: a.color, background: `${a.color}15`, border: `1px solid ${a.color}30` }}>
+                      {a.rarity}
+                    </span>
+                  </div>
+                  <p className="text-[11px]" style={{ color: "var(--text-3)" }}>
+                    {a.days}일 연속 달성 시 획득 · 같은 등급에 여러 동물 수록
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-lg font-bold tabular-nums" style={{ color: a.color, fontFamily: "var(--font-en)" }}>
+                    {a.days}일
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </section>
 
         {/* ── 기능 소개 ── */}
         <section className="space-y-10">
           <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, margin: "-60px" }}
-            className="text-center space-y-2"
+            initial={{ opacity: 0, y: 16 }} whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-60px" }} className="text-center space-y-2"
           >
             <p className="label-text tracking-[0.25em]">FEATURES</p>
-            <h2 className="text-2xl font-bold" style={{ color: "var(--text-1)" }}>
-              루틴을 지키는 데 필요한 모든 것
-            </h2>
+            <h2 className="text-2xl font-bold" style={{ color: "var(--text-1)" }}>루틴을 지키는 데 필요한 모든 것</h2>
           </motion.div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {features.map(({ icon: Icon, title, desc, color, bg, border }, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true, margin: "-40px" }}
-                transition={{ delay: i * 0.08 }}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {FEATURES.map(({ icon: Icon, title, desc, color, bg, border }, i) => (
+              <motion.div key={i}
+                initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-40px" }} transition={{ delay: i * 0.1 }}
                 className="dawn-card p-5 space-y-3"
               >
                 <div className="w-9 h-9 rounded-xl flex items-center justify-center"
@@ -427,7 +274,7 @@ export default function Landing() {
                   <Icon className="w-4 h-4" style={{ color }} />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold mb-1" style={{ color: "var(--text-1)" }}>{title}</p>
+                  <p className="text-sm font-semibold mb-1.5" style={{ color: "var(--text-1)" }}>{title}</p>
                   <p className="text-xs leading-relaxed" style={{ color: "var(--text-3)" }}>{desc}</p>
                 </div>
               </motion.div>
@@ -435,26 +282,43 @@ export default function Landing() {
           </div>
         </section>
 
-        {/* ── 하단 CTA ── */}
+        {/* ── 프리미엄 힌트 ── */}
         <motion.section
-          initial={{ opacity: 0, y: 24 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.7 }}
+          initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }} transition={{ duration: 0.7 }}
+          className="dawn-card p-8 flex flex-col sm:flex-row items-center gap-6"
+          style={{ borderColor: "rgba(255,200,50,0.2)" }}
+        >
+          <div className="text-5xl">⚡</div>
+          <div className="flex-1 text-center sm:text-left">
+            <p className="text-sm font-bold mb-1" style={{ color: "rgba(255,200,50,0.9)" }}>이어달리기 (프리미엄)</p>
+            <p className="text-xs leading-relaxed" style={{ color: "var(--text-3)" }}>
+              7일 달성 후 초기화 없이 30일로 이어가고 싶다면?<br />
+              이어달리기 기능으로 이미 달린 시간을 그대로 연결하세요.
+            </p>
+          </div>
+          <span className="text-[11px] px-3 py-1.5 rounded-full font-bold"
+            style={{ background: "rgba(255,200,50,0.1)", color: "rgba(255,200,50,0.8)", border: "1px solid rgba(255,200,50,0.2)" }}>
+            Coming Soon
+          </span>
+        </motion.section>
+
+        {/* ── CTA ── */}
+        <motion.section
+          initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }} transition={{ duration: 0.7 }}
           className="dawn-card p-12 flex flex-col items-center text-center gap-6"
         >
-          <div className="w-16 h-16 rounded-full"
-            style={{
-              background: "radial-gradient(circle at 35% 30%, rgba(112,192,255,0.2) 0%, rgba(43,143,240,0.08) 50%, transparent 70%)",
-              border: "1px solid rgba(112,192,255,0.2)",
-              boxShadow: "0 0 30px rgba(43,143,240,0.25)",
-            }} />
+          <motion.div className="flex gap-2 text-4xl"
+            animate={{ y: [0, -5, 0] }} transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}>
+            🥚🐣🐺🦄
+          </motion.div>
           <div className="space-y-2">
             <h2 className="text-2xl font-bold" style={{ color: "var(--text-1)" }}>
-              오늘 첫 루틴을 시작해요
+              첫 번째 동물을 수집해보세요
             </h2>
             <p className="text-sm" style={{ color: "var(--text-3)" }}>
-              달빛 아래, 조용히 나를 만들어가는 시간
+              7일만 지켜도 병아리가 생겨요. 오늘 시작하세요.
             </p>
           </div>
           <Link href="/login">
@@ -462,12 +326,8 @@ export default function Landing() {
               whileHover={{ scale: 1.05, boxShadow: "0 0 30px rgba(43,143,240,0.45)" }}
               whileTap={{ scale: 0.97 }}
               className="flex items-center gap-2 px-8 py-3.5 rounded-2xl text-sm font-semibold"
-              style={{
-                background: "var(--blue)",
-                color: "#fff",
-                boxShadow: "0 0 20px rgba(43,143,240,0.3)",
-              }}>
-              Vigilia 시작하기 <ArrowRight className="w-4 h-4" />
+              style={{ background: "var(--blue)", color: "#fff", boxShadow: "0 0 20px rgba(43,143,240,0.3)" }}>
+              Vigilia 무료 시작 <ArrowRight className="w-4 h-4" />
             </motion.button>
           </Link>
         </motion.section>
@@ -475,7 +335,7 @@ export default function Landing() {
         {/* ── 푸터 ── */}
         <footer className="flex items-center justify-center pb-8">
           <p className="text-[11px]" style={{ color: "var(--text-4)" }}>
-            © 2025 Vigilia — 달빛 아래 루틴을 지키는 곳
+            © 2025 Vigilia — 루틴이 동물이 되는 곳
           </p>
         </footer>
 
