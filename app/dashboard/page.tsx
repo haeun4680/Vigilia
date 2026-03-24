@@ -12,6 +12,7 @@ import { MonthlyView } from "@/components/monthly/MonthlyView";
 import { HabitGrid } from "@/components/dashboard/HabitGrid";
 import { createClient } from "@/lib/supabase";
 import { HabitProvider, useHabits, toLocalDateStr } from "@/lib/habit-context";
+import { ChallengeProvider } from "@/lib/challenge-context";
 
 type Tab = "dashboard" | "weekly" | "monthly";
 
@@ -148,6 +149,7 @@ export default function Home() {
       </div>
 
       <HabitProvider>
+      <ChallengeProvider>
         <div className="relative max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-7 space-y-4" style={{ zIndex: 1 }}>
 
           {/* ── 헤더 ────────────────────────────────────── */}
@@ -297,6 +299,7 @@ export default function Home() {
 
           <div className="h-8" />
         </div>
+      </ChallengeProvider>
       </HabitProvider>
     </div>
   );
