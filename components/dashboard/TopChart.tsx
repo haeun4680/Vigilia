@@ -81,10 +81,8 @@ export function TopChart() {
 
   const xInterval = days <= 7 ? 0 : days <= 30 ? 3 : days <= 90 ? 6 : days <= 180 ? 14 : 30;
 
-  // 위반 날짜를 차트 라벨로 변환
-  const violationLabels = data
-    .filter(d => violationDates.has(d.dateStr))
-    .map(d => d.label);
+  // 위반 날짜의 라벨 + 실제 값
+  const violationPoints = data.filter(d => violationDates.has(d.dateStr) && d.value !== null);
 
   return (
     <div className="w-full">
@@ -148,9 +146,9 @@ export function TopChart() {
               <Tooltip content={<CustomTooltip />}
                 cursor={{ stroke: "rgba(136,192,224,0.2)", strokeWidth: 1, strokeDasharray: "4 4" }} />
               <ReferenceLine y={stats.avg} stroke="rgba(136,192,224,0.1)" strokeDasharray="6 4" />
-              {violationLabels.map((label, i) => (
-                <ReferenceDot key={i} x={label} y={0} r={3}
-                  fill="rgba(200,80,80,0.85)" stroke="none" />
+              {violationPoints.map((d, i) => (
+                <ReferenceDot key={i} x={d.label} y={d.value as number} r={4}
+                  fill="rgba(200,80,80,0.9)" stroke="rgba(255,120,120,0.4)" strokeWidth={2} />
               ))}
               <Area type="monotone" dataKey="value"
                 stroke="var(--blue)" strokeWidth={1.5}
