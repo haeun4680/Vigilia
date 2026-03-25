@@ -1,11 +1,14 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useChallenges } from "@/lib/challenge-context";
 import { ANIMALS } from "@/lib/animals";
+import { CollectionModal } from "./CollectionModal";
 
 export function CollectionPreview() {
   const { completedChallenges } = useChallenges();
+  const [showModal, setShowModal] = useState(false);
 
   // 수집한 동물 ID 목록 (중복 제거)
   const collectedIds = [...new Set(completedChallenges.map(c => c.target_animal))];
@@ -14,14 +17,19 @@ export function CollectionPreview() {
     .filter(Boolean) as typeof ANIMALS;
 
   return (
+    <>
     <div className="flex flex-col gap-3 pb-5" style={{ borderBottom: "1px solid var(--border-2)" }}>
       {/* 헤더 */}
-      <div className="flex items-center justify-between">
+      <button
+        onClick={() => setShowModal(true)}
+        className="flex items-center justify-between w-full group"
+      >
         <p className="label-text">COLLECTION</p>
-        <span className="text-[10px]" style={{ color: "var(--text-3)" }}>
-          {collectedAnimals.length} / {ANIMALS.length}
+        <span className="text-[10px] transition-colors"
+          style={{ color: "var(--text-3)" }}>
+          {collectedAnimals.length} / {ANIMALS.length} →
         </span>
-      </div>
+      </button>
 
       {/* 수집된 동물 없을 때 */}
       {collectedAnimals.length === 0 && (
@@ -75,5 +83,16 @@ export function CollectionPreview() {
         </div>
       )}
     </div>
+
+    {/* 도감 모달 */}
+    <AnimatePresence>
+      {showModal && (
+        <CollectionModal
+          collectedIds={collectedIds}
+          onClose={() => setShowModal(false)}
+        />
+      )}
+    </AnimatePresence>
+    </>
   );
 }
