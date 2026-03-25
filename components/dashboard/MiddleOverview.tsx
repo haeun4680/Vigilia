@@ -188,7 +188,7 @@ export function MiddleOverview() {
         </div>
       </div>
       <div className="overflow-x-auto -mx-1 px-1">
-        <div className="flex gap-3" style={{ minWidth: "440px" }}>
+        <div className="flex gap-3" style={{ minWidth: "320px" }}>
           {weeks.map((w, i) => (
             <WeekMiniChart key={w.week} weekData={w} weekIdx={i} habits={habits} checks={checks} />
           ))}

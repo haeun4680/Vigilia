@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Plus, X, Loader2, Pencil, Trash2, GripVertical } from "lucide-react";
 import { createClient } from "@/lib/supabase";
@@ -15,6 +15,17 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 
 const DAY_SHORT = ["일","월","화","수","목","금","토"];
+
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, []);
+  return isMobile;
+}
 
 function getMonthDates() {
   const today = new Date();
@@ -172,6 +183,12 @@ function SortableRow({ habit, rowIdx, monthDates, checks, editingId, editIcon, e
 export function HabitGrid() {
   const supabase = createClient();
   const { habits, checks, userId, loading, toggleCheck, refresh, reorderHabits } = useHabits();
+  const isMobile = useIsMobile();
+
+  // 모바일에서는 최근 7일만 표시
+  const visibleDates = isMobile
+    ? monthDates.filter(d => !d.isFuture).slice(-7)
+    : monthDates;
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -248,16 +265,18 @@ export function HabitGrid() {
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay: 0.1 }} className="w-full overflow-x-auto">
-      <table className="w-full border-collapse min-w-[540px]">
+      <table className="w-full border-collapse" style={{ minWidth: isMobile ? "auto" : "540px" }}>
         <thead>
           <tr>
             <th className="text-left pb-3 pr-6 w-[160px]">
               <div>
                 <span className="label-text">나의 루틴</span>
-                <p className="text-[10px] mt-0.5" style={{ color: "var(--text-3)" }}>{MONTH_LABEL}</p>
+                <p className="text-[10px] mt-0.5" style={{ color: "var(--text-3)" }}>
+                  {isMobile ? "최근 7일" : MONTH_LABEL}
+                </p>
               </div>
             </th>
-            {monthDates.map((d, i) => (
+            {visibleDates.map((d, i) => (
               <th key={i} className="pb-3" style={{ minWidth: 28 }}>
                 <div className="flex flex-col items-center gap-0.5">
                   <span className="text-[8px] font-medium"
@@ -273,7 +292,7 @@ export function HabitGrid() {
             ))}
           </tr>
           <tr>
-            <td colSpan={monthDates.length + 1} className="pb-2" style={{ borderBottom: "1px solid var(--border-2)" }} />
+            <td colSpan={visibleDates.length + 1} className="pb-2" style={{ borderBottom: "1px solid var(--border-2)" }} />
           </tr>
         </thead>
 
@@ -283,7 +302,7 @@ export function HabitGrid() {
           <AnimatePresence initial={false}>
             {habits.length === 0 && !adding && (
               <tr>
-                <td colSpan={monthDates.length + 1} className="py-8 text-center">
+                <td colSpan={visibleDates.length + 1} className="py-8 text-center">
                   <p className="text-xs" style={{ color: "var(--text-3)" }}>
                     아직 루틴이 없어요. 아래 버튼으로 추가해보세요!
                   </p>
@@ -296,7 +315,7 @@ export function HabitGrid() {
                 key={habit.id}
                 habit={habit}
                 rowIdx={rowIdx}
-                monthDates={monthDates}
+                monthDates={visibleDates}
                 checks={checks}
                 editingId={editingId}
                 editIcon={editIcon}
@@ -335,16 +354,16 @@ export function HabitGrid() {
                     <button onClick={() => setAdding(false)} style={{ color: "var(--text-3)" }}><X className="w-4 h-4" /></button>
                   </div>
                 </td>
-                {monthDates.map((_, i) => <td key={i} />)}
+                {visibleDates.map((_, i) => <td key={i} />)}
               </motion.tr>
             )}
           </AnimatePresence>
 
           <tr>
-            <td colSpan={monthDates.length + 1} className="pt-1" style={{ borderTop: "1px solid var(--border-2)" }} />
+            <td colSpan={visibleDates.length + 1} className="pt-1" style={{ borderTop: "1px solid var(--border-2)" }} />
           </tr>
           <tr>
-            <td colSpan={monthDates.length + 1} className="pt-2 pb-1">
+            <td colSpan={visibleDates.length + 1} className="pt-2 pb-1">
               <motion.button onClick={() => setAdding(true)}
                 whileHover={{ x: 2 }} whileTap={{ scale: 0.95 }}
                 className="flex items-center gap-1.5 text-sm font-medium"

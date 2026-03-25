@@ -262,11 +262,16 @@ export default function Home() {
               >
                 <section className="dawn-card p-4 sm:p-6"><TopChart /></section>
                 <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4 items-stretch">
+                  {/* 모바일: 챌린지+도감 먼저 (lg에서는 숨김) */}
+                  <div className="lg:hidden">
+                    <section className="dawn-card p-4 sm:p-6"><RightSidebar /></section>
+                  </div>
                   <div className="flex flex-col gap-4 min-w-0">
                     <section className="dawn-card p-4 sm:p-6"><MiddleOverview /></section>
                     <section className="dawn-card p-4 sm:p-6"><HabitGrid /></section>
                   </div>
-                  <div className="flex flex-col">
+                  {/* 데스크톱 전용 사이드바 */}
+                  <div className="hidden lg:flex flex-col">
                     <section className="dawn-card p-4 sm:p-6 h-full"><RightSidebar /></section>
                   </div>
                 </div>
