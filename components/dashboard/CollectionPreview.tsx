@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { BookOpen } from "lucide-react";
 import { useChallenges } from "@/lib/challenge-context";
 import { ANIMALS } from "@/lib/animals";
 import { CollectionModal } from "./CollectionModal";
@@ -20,16 +21,12 @@ export function CollectionPreview() {
     <>
     <div className="flex flex-col gap-3 pb-5" style={{ borderBottom: "1px solid var(--border-2)" }}>
       {/* 헤더 */}
-      <button
-        onClick={() => setShowModal(true)}
-        className="flex items-center justify-between w-full group"
-      >
+      <div className="flex items-center justify-between">
         <p className="label-text">COLLECTION</p>
-        <span className="text-[10px] transition-colors"
-          style={{ color: "var(--text-3)" }}>
-          {collectedAnimals.length} / {ANIMALS.length} →
+        <span className="text-[10px]" style={{ color: "var(--text-3)" }}>
+          {collectedAnimals.length} / {ANIMALS.length}
         </span>
-      </button>
+      </div>
 
       {/* 수집된 동물 없을 때 */}
       {collectedAnimals.length === 0 && (
@@ -82,6 +79,20 @@ export function CollectionPreview() {
           ))}
         </div>
       )}
+      {/* 도감 보기 버튼 */}
+      <motion.button
+        onClick={() => setShowModal(true)}
+        whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+        className="w-full flex items-center justify-center gap-2 py-2 rounded-xl text-xs font-bold"
+        style={{
+          background: "rgba(43,143,240,0.08)",
+          border: "1px solid rgba(43,143,240,0.2)",
+          color: "var(--blue)",
+        }}
+      >
+        <BookOpen className="w-3.5 h-3.5" />
+        도감 보기
+      </motion.button>
     </div>
 
     {/* 도감 모달 */}
