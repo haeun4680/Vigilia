@@ -4,10 +4,11 @@ import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, ReferenceLine, CartesianGrid,
+  ResponsiveContainer, ReferenceLine, CartesianGrid, ReferenceDot,
 } from "recharts";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { useHabits, calcDailyRate, toLocalDateStr } from "@/lib/habit-context";
+import { useForbidden } from "@/lib/forbidden-context";
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload?.[0]?.value != null) {
@@ -60,6 +61,7 @@ function buildChartData(habits: any[], checks: any[], days: number) {
 
 export function TopChart() {
   const { habits, checks } = useHabits();
+  const { violationDates } = useForbidden();
   const [range, setRange] = useState<RangeKey>("1M");
 
   const days = RANGES.find(r => r.key === range)!.days;
@@ -78,6 +80,11 @@ export function TopChart() {
   }, [data]);
 
   const xInterval = days <= 7 ? 0 : days <= 30 ? 3 : days <= 90 ? 6 : days <= 180 ? 14 : 30;
+
+  // 위반 날짜를 차트 라벨로 변환
+  const violationLabels = data
+    .filter(d => violationDates.has(d.dateStr))
+    .map(d => d.label);
 
   return (
     <div className="w-full">
@@ -141,6 +148,10 @@ export function TopChart() {
               <Tooltip content={<CustomTooltip />}
                 cursor={{ stroke: "rgba(136,192,224,0.2)", strokeWidth: 1, strokeDasharray: "4 4" }} />
               <ReferenceLine y={stats.avg} stroke="rgba(136,192,224,0.1)" strokeDasharray="6 4" />
+              {violationLabels.map((label, i) => (
+                <ReferenceDot key={i} x={label} y={0} r={3}
+                  fill="rgba(200,80,80,0.85)" stroke="none" />
+              ))}
               <Area type="monotone" dataKey="value"
                 stroke="var(--blue)" strokeWidth={1.5}
                 fill="url(#sageGradient)" dot={false} connectNulls={false}

@@ -13,6 +13,8 @@ import { HabitGrid } from "@/components/dashboard/HabitGrid";
 import { createClient } from "@/lib/supabase";
 import { HabitProvider, useHabits, toLocalDateStr } from "@/lib/habit-context";
 import { ChallengeProvider } from "@/lib/challenge-context";
+import { ForbiddenProvider } from "@/lib/forbidden-context";
+import { ForbiddenGrid } from "@/components/dashboard/ForbiddenGrid";
 import { AutoUpdater } from "@/components/updater/AutoUpdater";
 
 type Tab = "dashboard" | "weekly" | "monthly";
@@ -151,6 +153,7 @@ export default function Home() {
 
       <HabitProvider>
       <ChallengeProvider>
+      <ForbiddenProvider>
         <div className="relative max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-7 space-y-4" style={{ zIndex: 1 }}>
 
           {/* ── 헤더 ────────────────────────────────────── */}
@@ -269,6 +272,7 @@ export default function Home() {
                   <div className="flex flex-col gap-4 min-w-0">
                     <section className="dawn-card p-4 sm:p-6"><MiddleOverview /></section>
                     <section className="dawn-card p-4 sm:p-6"><HabitGrid /></section>
+                    <section className="dawn-card p-4 sm:p-6"><ForbiddenGrid /></section>
                   </div>
                   {/* 데스크톱 전용 사이드바 */}
                   <div className="hidden lg:flex flex-col">
@@ -305,6 +309,7 @@ export default function Home() {
 
           <div className="h-8" />
         </div>
+      </ForbiddenProvider>
       </ChallengeProvider>
       </HabitProvider>
       <AutoUpdater />
