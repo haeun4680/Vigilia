@@ -41,9 +41,10 @@ export function CollectionModal({
       onClick={onClose}
     >
       <motion.div
-        initial={{ scale: 0.92, y: 24 }} animate={{ scale: 1, y: 0 }}
-        exit={{ scale: 0.92, y: 24 }} transition={{ type: "spring", stiffness: 260, damping: 24 }}
-        className="dawn-card w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden"
+        initial={{ scale: 0.88, y: 32, opacity: 0 }} animate={{ scale: 1, y: 0, opacity: 1 }}
+        exit={{ scale: 0.88, y: 32, opacity: 0 }} transition={{ type: "spring", stiffness: 240, damping: 22 }}
+        className="dawn-card w-full max-w-2xl max-h-[88vh] flex flex-col overflow-hidden"
+        style={{ boxShadow: "0 0 80px rgba(43,143,240,0.15), 0 0 160px rgba(43,143,240,0.06)" }}
         onClick={e => e.stopPropagation()}
       >
         {/* 헤더 */}
@@ -89,7 +90,7 @@ export function CollectionModal({
               key={filter}
               initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0 }} transition={{ duration: 0.2 }}
-              className="grid grid-cols-4 sm:grid-cols-5 gap-2.5"
+              className="grid grid-cols-4 sm:grid-cols-6 gap-3"
             >
               {filtered.map((animal, i) => {
                 const isCollected = collectedSet.has(animal.id);
@@ -99,7 +100,7 @@ export function CollectionModal({
                     initial={{ opacity: 0, scale: 0.85 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={{ delay: i * 0.03 }}
-                    className="flex flex-col items-center gap-1.5 p-3 rounded-xl"
+                    className="flex flex-col items-center gap-2 p-3 rounded-xl"
                     style={{
                       background: isCollected
                         ? `${animal.glowColor}15`
@@ -111,7 +112,7 @@ export function CollectionModal({
                   >
                     {/* 동물 이모지 */}
                     <motion.span
-                      className="text-2xl"
+                      className="text-3xl"
                       animate={isCollected ? { y: [0, -3, 0] } : {}}
                       transition={{ duration: 2.5 + i * 0.2, repeat: Infinity, ease: "easeInOut" }}
                       style={{
