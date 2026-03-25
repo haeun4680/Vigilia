@@ -9,6 +9,7 @@ import {
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { useHabits, calcDailyRate, toLocalDateStr } from "@/lib/habit-context";
 import { useForbidden } from "@/lib/forbidden-context";
+import { Line, ComposedChart } from "recharts";
 
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload?.[0]?.value != null) {
@@ -61,15 +62,20 @@ function buildChartData(habits: any[], checks: any[], days: number) {
 
 export function TopChart() {
   const { habits, checks } = useHabits();
-  const { violationDates } = useForbidden();
+  const { habits: forbiddenHabits, checks: forbiddenChecks } = useForbidden();
   const [range, setRange] = useState<RangeKey>("1M");
 
   const days = RANGES.find(r => r.key === range)!.days;
 
-  const data = useMemo(
-    () => buildChartData(habits, checks, days),
-    [habits, checks, days]
-  );
+  const data = useMemo(() => {
+    const base = buildChartData(habits, checks, days);
+    return base.map(d => {
+      if (forbiddenHabits.length === 0) return { ...d, violationRate: null };
+      const violated = forbiddenChecks.filter(c => c.checked_date === d.dateStr).length;
+      const rate = Math.round((violated / forbiddenHabits.length) * 100);
+      return { ...d, violationRate: violated > 0 ? rate : null };
+    });
+  }, [habits, checks, days, forbiddenHabits, forbiddenChecks]);
 
   const stats = useMemo(() => {
     const valid = data.filter(d => d.value !== null) as { value: number }[];
@@ -81,8 +87,6 @@ export function TopChart() {
 
   const xInterval = days <= 7 ? 0 : days <= 30 ? 3 : days <= 90 ? 6 : days <= 180 ? 14 : 30;
 
-  // 위반 날짜의 라벨 + 실제 값
-  const violationPoints = data.filter(d => violationDates.has(d.dateStr) && d.value !== null);
 
   return (
     <div className="w-full">
@@ -130,7 +134,7 @@ export function TopChart() {
           exit={{ opacity: 0 }} transition={{ duration: 0.25 }}
           className="h-44">
           <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={data} margin={{ top: 4, right: 8, bottom: 0, left: -20 }}>
+            <ComposedChart data={data} margin={{ top: 4, right: 8, bottom: 0, left: -20 }}>
               <defs>
                 <linearGradient id="sageGradient" x1="0" y1="0" x2="0" y2="1">
                   <stop offset="5%"  stopColor="#2b8ff0" stopOpacity={0.35} />
@@ -150,29 +154,22 @@ export function TopChart() {
                 stroke="var(--blue)" strokeWidth={1.5}
                 fill="url(#sageGradient)" dot={false} connectNulls={false}
                 style={{ filter: "drop-shadow(0 0 6px rgba(136,192,224,0.5))" }} />
-            </AreaChart>
+              <Line type="monotone" dataKey="violationRate"
+                stroke="transparent" strokeWidth={0} connectNulls={false}
+                dot={(props: any) => {
+                  const { cx, cy, payload } = props;
+                  if (payload.violationRate === null) return <g key={props.key} />;
+                  return (
+                    <circle key={props.key} cx={cx} cy={cy} r={4}
+                      fill="rgba(200,80,80,0.9)"
+                      stroke="rgba(255,120,120,0.5)" strokeWidth={1.5} />
+                  );
+                }}
+                activeDot={false}
+              />
+            </ComposedChart>
           </ResponsiveContainer>
         </motion.div>
-
-        {/* 금지 위반 트랙 */}
-        {violationPoints.length > 0 && (
-          <div className="flex items-center gap-2 mt-1" style={{ paddingLeft: "32px", paddingRight: "8px" }}>
-            <span className="text-[8px] flex-shrink-0" style={{ color: "rgba(200,80,80,0.6)" }}>위반</span>
-            <div className="flex flex-1">
-              {data.map((d, i) => (
-                <div key={i} className="flex-1 flex items-center justify-center">
-                  {violationDates.has(d.dateStr) && (
-                    <div style={{
-                      width: 5, height: 5, borderRadius: "50%",
-                      background: "rgba(200,80,80,0.85)",
-                      boxShadow: "0 0 4px rgba(200,80,80,0.6)",
-                    }} />
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </AnimatePresence>
     </div>
   );
