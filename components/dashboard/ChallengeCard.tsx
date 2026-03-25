@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronRight } from "lucide-react";
 import { useChallenges } from "@/lib/challenge-context";
@@ -9,6 +9,135 @@ import {
   ANIMALS, DURATION_OPTIONS, DURATION_INFO,
   getAnimalsByDuration, type Animal,
 } from "@/lib/animals";
+
+// ── 컨페티 파티클 ─────────────────────────────────
+const CONFETTI_COLORS = [
+  "#ff6b6b", "#ffd93d", "#6bcb77", "#4d96ff",
+  "#ff922b", "#cc5de8", "#f06595", "#74c0fc",
+];
+
+function Confetti() {
+  const pieces = useMemo(() => Array.from({ length: 60 }, (_, i) => ({
+    id: i,
+    x: Math.random() * 100,
+    delay: Math.random() * 1.2,
+    duration: 2.2 + Math.random() * 1.5,
+    color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+    size: 6 + Math.random() * 8,
+    rotation: Math.random() * 360,
+    shape: Math.random() > 0.5 ? "rect" : "circle",
+  })), []);
+
+  return (
+    <div className="fixed inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 110 }}>
+      {pieces.map(p => (
+        <motion.div
+          key={p.id}
+          initial={{ y: -20, x: `${p.x}vw`, opacity: 1, rotate: p.rotation }}
+          animate={{ y: "110vh", opacity: [1, 1, 0], rotate: p.rotation + 360 * 2 }}
+          transition={{ duration: p.duration, delay: p.delay, ease: "easeIn" }}
+          style={{
+            position: "absolute",
+            top: 0,
+            width: p.size,
+            height: p.shape === "rect" ? p.size * 0.5 : p.size,
+            borderRadius: p.shape === "circle" ? "50%" : "2px",
+            background: p.color,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
+
+// ── 동물 획득 축하 모달 ───────────────────────────
+function AcquisitionModal({ animal, onClose }: { animal: Animal; onClose: () => void }) {
+  useEffect(() => {
+    const t = setTimeout(onClose, 5000);
+    return () => clearTimeout(t);
+  }, [onClose]);
+
+  return (
+    <>
+      <Confetti />
+      <motion.div
+        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+        className="fixed inset-0 flex items-center justify-center p-4"
+        style={{ background: "rgba(2,7,16,0.88)", backdropFilter: "blur(10px)", zIndex: 105 }}
+        onClick={onClose}
+      >
+        <motion.div
+          initial={{ scale: 0.5, y: 40 }} animate={{ scale: 1, y: 0 }}
+          exit={{ scale: 0.8, opacity: 0 }}
+          transition={{ type: "spring", stiffness: 260, damping: 20 }}
+          className="dawn-card p-10 flex flex-col items-center gap-5 max-w-xs w-full text-center"
+          style={{ borderColor: `${animal.rarityColor}40`, boxShadow: `0 0 60px ${animal.glowColor}40` }}
+          onClick={e => e.stopPropagation()}
+        >
+          {/* 동물 이모지 */}
+          <motion.div
+            animate={{ y: [0, -14, 0], scale: [1, 1.08, 1] }}
+            transition={{ duration: 1.8, repeat: Infinity, ease: "easeInOut" }}
+            className="text-8xl"
+            style={{ filter: `drop-shadow(0 0 24px ${animal.glowColor})` }}
+          >
+            {animal.emoji}
+          </motion.div>
+
+          {/* NEW 뱃지 */}
+          <motion.div
+            initial={{ scale: 0 }} animate={{ scale: 1 }}
+            transition={{ delay: 0.3, type: "spring", stiffness: 300 }}
+          >
+            <span className="text-[11px] font-black px-3 py-1 rounded-full tracking-widest"
+              style={{
+                background: `${animal.rarityColor}20`,
+                color: animal.rarityColor,
+                border: `1px solid ${animal.rarityColor}50`,
+              }}>
+              NEW {animal.rarityLabel}
+            </span>
+          </motion.div>
+
+          {/* 이름 */}
+          <div className="space-y-1">
+            <motion.p
+              initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="text-2xl font-black"
+              style={{ color: "var(--text-1)" }}
+            >
+              {animal.name}
+            </motion.p>
+            <motion.p
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+              transition={{ delay: 0.35 }}
+              className="text-sm"
+              style={{ color: "var(--text-3)" }}
+            >
+              도감에 추가됐어요! 🎉
+            </motion.p>
+          </div>
+
+          {/* 닫기 버튼 */}
+          <motion.button
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.8 }}
+            whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
+            onClick={onClose}
+            className="w-full py-2.5 rounded-xl text-sm font-bold mt-1"
+            style={{
+              background: `${animal.rarityColor}20`,
+              border: `1px solid ${animal.rarityColor}40`,
+              color: animal.rarityColor,
+            }}
+          >
+            확인
+          </motion.button>
+        </motion.div>
+      </motion.div>
+    </>
+  );
+}
 
 // ── 챌린지 진행 일수 계산 ─────────────────────────
 function calcProgress(startedAt: string, checks: any[], habits: any[]) {
@@ -140,7 +269,7 @@ export function ChallengeCard() {
   const { activeChallenge, completedChallenges, loading, startChallenge, completeChallenge } = useChallenges();
   const { habits, checks } = useHabits();
   const [showModal, setShowModal] = useState(false);
-  const [justCompleted, setJustCompleted] = useState(false);
+  const [celebrateAnimal, setCelebrateAnimal] = useState<Animal | null>(null);
 
   const animal = useMemo(() => {
     if (!activeChallenge) return null;
@@ -160,9 +289,9 @@ export function ChallengeCard() {
 
   // 완료 처리
   const handleComplete = async () => {
-    setJustCompleted(true);
+    if (!animal) return;
     await completeChallenge();
-    setTimeout(() => setJustCompleted(false), 3000);
+    setCelebrateAnimal(animal);
   };
 
   const handleStart = async (duration: number, a: Animal) => {
@@ -187,24 +316,8 @@ export function ChallengeCard() {
           </span>
         </div>
 
-        {/* 완료 축하 */}
-        <AnimatePresence>
-          {justCompleted && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0 }}
-              className="text-center py-3 rounded-xl"
-              style={{ background: "rgba(255,200,50,0.08)", border: "1px solid rgba(255,200,50,0.2)" }}
-            >
-              <p className="text-xl mb-1">{animal?.emoji}</p>
-              <p className="text-xs font-bold" style={{ color: "rgba(255,200,50,0.9)" }}>
-                {animal?.name} 획득! 🎉
-              </p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         {/* 진행 중인 챌린지 */}
-        {activeChallenge && animal && !justCompleted && (
+        {activeChallenge && animal && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col gap-3">
             {/* 동물 + 정보 */}
             <div className="flex items-center gap-3">
@@ -309,6 +422,16 @@ export function ChallengeCard() {
           <AnimalSelectModal
             onClose={() => setShowModal(false)}
             onStart={handleStart}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* 동물 획득 축하 모달 */}
+      <AnimatePresence>
+        {celebrateAnimal && (
+          <AcquisitionModal
+            animal={celebrateAnimal}
+            onClose={() => setCelebrateAnimal(null)}
           />
         )}
       </AnimatePresence>
