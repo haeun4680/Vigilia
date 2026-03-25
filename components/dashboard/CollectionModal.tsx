@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X } from "lucide-react";
 import { ANIMALS, type Rarity } from "@/lib/animals";
@@ -33,7 +34,7 @@ export function CollectionModal({
 
   const collectedCount = ANIMALS.filter(a => collectedSet.has(a.id)).length;
 
-  return (
+  const content = (
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -165,4 +166,6 @@ export function CollectionModal({
       </motion.div>
     </motion.div>
   );
+
+  return createPortal(content, document.body);
 }

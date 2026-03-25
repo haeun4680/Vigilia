@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, ChevronRight } from "lucide-react";
 import { useChallenges } from "@/lib/challenge-context";
@@ -57,7 +58,7 @@ function AcquisitionModal({ animal, onClose }: { animal: Animal; onClose: () => 
     return () => clearTimeout(t);
   }, [onClose]);
 
-  return (
+  const content = (
     <>
       <Confetti />
       <motion.div
@@ -137,6 +138,8 @@ function AcquisitionModal({ animal, onClose }: { animal: Animal; onClose: () => 
       </motion.div>
     </>
   );
+
+  return createPortal(content, document.body);
 }
 
 // ── 챌린지 진행 일수 계산 ─────────────────────────
