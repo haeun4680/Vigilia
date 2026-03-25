@@ -4,7 +4,7 @@ import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip,
-  ResponsiveContainer, ReferenceLine, CartesianGrid, ReferenceDot,
+  ResponsiveContainer, ReferenceLine, CartesianGrid,
 } from "recharts";
 import { TrendingUp, TrendingDown } from "lucide-react";
 import { useHabits, calcDailyRate, toLocalDateStr } from "@/lib/habit-context";
@@ -146,10 +146,6 @@ export function TopChart() {
               <Tooltip content={<CustomTooltip />}
                 cursor={{ stroke: "rgba(136,192,224,0.2)", strokeWidth: 1, strokeDasharray: "4 4" }} />
               <ReferenceLine y={stats.avg} stroke="rgba(136,192,224,0.1)" strokeDasharray="6 4" />
-              {violationPoints.map((d, i) => (
-                <ReferenceDot key={i} x={d.label} y={d.value as number} r={4}
-                  fill="rgba(200,80,80,0.9)" stroke="rgba(255,120,120,0.4)" strokeWidth={2} />
-              ))}
               <Area type="monotone" dataKey="value"
                 stroke="var(--blue)" strokeWidth={1.5}
                 fill="url(#sageGradient)" dot={false} connectNulls={false}
@@ -157,6 +153,26 @@ export function TopChart() {
             </AreaChart>
           </ResponsiveContainer>
         </motion.div>
+
+        {/* 금지 위반 트랙 */}
+        {violationPoints.length > 0 && (
+          <div className="flex items-center gap-2 mt-1" style={{ paddingLeft: "32px", paddingRight: "8px" }}>
+            <span className="text-[8px] flex-shrink-0" style={{ color: "rgba(200,80,80,0.6)" }}>위반</span>
+            <div className="flex flex-1">
+              {data.map((d, i) => (
+                <div key={i} className="flex-1 flex items-center justify-center">
+                  {violationDates.has(d.dateStr) && (
+                    <div style={{
+                      width: 5, height: 5, borderRadius: "50%",
+                      background: "rgba(200,80,80,0.85)",
+                      boxShadow: "0 0 4px rgba(200,80,80,0.6)",
+                    }} />
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </AnimatePresence>
     </div>
   );
