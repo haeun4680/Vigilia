@@ -403,7 +403,7 @@ export function ChallengeCard() {
         )}
 
         {/* 챌린지 없음 */}
-        {!activeChallenge && !justCompleted && (
+        {!activeChallenge && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex flex-col items-center gap-3 py-2">
             <span className="text-4xl">🥚</span>
             <p className="text-[11px] text-center" style={{ color: "var(--text-3)" }}>
