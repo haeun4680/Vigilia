@@ -384,6 +384,21 @@ export function ChallengeCard() {
                 🎉 {animal.name} 획득하기!
               </motion.button>
             )}
+
+            {/* 테스트용 버튼 (개발 확인용) */}
+            {!isComplete && (
+              <button
+                onClick={() => setCelebrateAnimal(animal)}
+                className="w-full py-1.5 rounded-xl text-[10px] font-bold"
+                style={{
+                  background: "rgba(255,255,255,0.03)",
+                  border: "1px dashed rgba(255,255,255,0.1)",
+                  color: "var(--text-4)",
+                }}
+              >
+                🧪 획득 연출 테스트
+              </button>
+            )}
           </motion.div>
         )}
 
