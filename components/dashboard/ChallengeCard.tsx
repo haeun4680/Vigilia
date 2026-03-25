@@ -64,7 +64,7 @@ function AcquisitionModal({ animal, onClose }: { animal: Animal; onClose: () => 
       <motion.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         className="fixed inset-0 flex items-center justify-center p-4"
-        style={{ background: "rgba(2,7,16,0.88)", backdropFilter: "blur(10px)", zIndex: 105 }}
+        style={{ background: "rgba(2,7,16,0.45)", backdropFilter: "blur(8px)", zIndex: 105 }}
         onClick={onClose}
       >
         <motion.div

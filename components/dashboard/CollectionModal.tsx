@@ -38,7 +38,7 @@ export function CollectionModal({
     <motion.div
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: "rgba(2,7,16,0.88)", backdropFilter: "blur(12px)" }}
+      style={{ background: "rgba(2,7,16,0.45)", backdropFilter: "blur(8px)" }}
       onClick={onClose}
     >
       <motion.div
