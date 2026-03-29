@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Check, Plus, X, Loader2, Pencil, Trash2, GripVertical } from "lucide-react";
 import { createClient } from "@/lib/supabase";
@@ -49,8 +49,6 @@ function getMonthDates() {
   });
 }
 
-const monthDates = getMonthDates();
-const MONTH_LABEL = new Date().toLocaleDateString("ko-KR", { year: "numeric", month: "long" });
 
 function SortableRow({ habit, rowIdx, monthDates, checks, editingId, editIcon, editName, hoverRow, ripples,
   setHoverRow, setEditIcon, setEditName, setEditingId, onSaveEdit, onStartEdit, onDelete, onToggle, isChecked }: any) {
@@ -184,6 +182,9 @@ export function HabitGrid() {
   const supabase = createClient();
   const { habits, checks, userId, loading, toggleCheck, refresh, reorderHabits } = useHabits();
   const isMobile = useIsMobile();
+
+  const monthDates = useMemo(() => getMonthDates(), []);
+  const MONTH_LABEL = useMemo(() => new Date().toLocaleDateString("ko-KR", { year: "numeric", month: "long" }), []);
 
   // 모바일에서는 최근 7일만 표시
   const visibleDates = isMobile

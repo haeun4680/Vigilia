@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { X, Plus, Loader2, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase";
@@ -30,7 +30,6 @@ function getMonthDates() {
   });
 }
 
-const monthDates = getMonthDates();
 
 function useIsMobile() {
   const [isMobile, setIsMobile] = useState(false);
@@ -47,6 +46,7 @@ export function ForbiddenGrid() {
   const supabase = createClient();
   const { habits, checks, userId, loading, toggleCheck, refresh } = useForbidden();
   const isMobile = useIsMobile();
+  const monthDates = useMemo(() => getMonthDates(), []);
 
   const visibleDates = isMobile
     ? monthDates.filter(d => !d.isFuture).slice(-7)
