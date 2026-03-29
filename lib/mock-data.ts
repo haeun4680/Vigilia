@@ -31,8 +31,10 @@ export type HabitRow = {
 
 function genMonthly(fillRate: number, seed = 42): boolean[] {
   const rand = seededRand(seed);
-  const today = new Date().getDate();
-  return Array.from({ length: 30 }, (_, i) =>
+  const now = new Date();
+  const today = now.getDate();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  return Array.from({ length: daysInMonth }, (_, i) =>
     i + 1 < today ? rand() < fillRate : false
   );
 }

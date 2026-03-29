@@ -4,8 +4,10 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { habitRows, HabitRow } from "@/lib/mock-data";
 
-const DAYS = Array.from({ length: 30 }, (_, i) => i + 1);
-const TODAY = new Date().getDate();
+const _now = new Date();
+const DAYS_IN_MONTH = new Date(_now.getFullYear(), _now.getMonth() + 1, 0).getDate();
+const DAYS = Array.from({ length: DAYS_IN_MONTH }, (_, i) => i + 1);
+const TODAY = _now.getDate();
 
 export function MonthlyGrid() {
   const [habits, setHabits] = useState<HabitRow[]>(habitRows);
@@ -59,7 +61,7 @@ export function MonthlyGrid() {
               ))}
             </tr>
             <tr>
-              <td colSpan={31} style={{ borderBottom: "1px solid var(--border-2)", paddingBottom: "4px" }} />
+              <td colSpan={DAYS_IN_MONTH + 1} style={{ borderBottom: "1px solid var(--border-2)", paddingBottom: "4px" }} />
             </tr>
           </thead>
 
