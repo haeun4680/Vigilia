@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, ArrowLeft, Check, X, Sparkles, RefreshCw } from "lucide-react";
 import { useHabits, toLocalDateStr } from "@/lib/habit-context";
 import type { Habit, HabitCheck } from "@/lib/supabase";
+import { useForbidden } from "@/lib/forbidden-context";
+import type { ForbiddenHabit, ForbiddenCheck } from "@/lib/forbidden-context";
 
 // ─── AI 코치 ─────────────────────────────────────────────
 type CoachResult = { strength: string; improve: string; tip: string; score: number };
@@ -328,9 +330,10 @@ function DayColumn({ dayInfo, habits, checks, colIdx, selected, onSelect }: {
 }
 
 // ─── 월 상세 뷰 ───────────────────────────────────────────
-function MonthDetail({ year, month, habits, checks, todayStr, onBack }: {
+function MonthDetail({ year, month, habits, checks, forbiddenHabits, forbiddenChecks, todayStr, onBack }: {
   year: number; month: number;
   habits: Habit[]; checks: HabitCheck[];
+  forbiddenHabits: ForbiddenHabit[]; forbiddenChecks: ForbiddenCheck[];
   todayStr: string; onBack: () => void;
 }) {
   const [selectedDate, setSelectedDate] = useState<string | null>(() => {
@@ -406,7 +409,7 @@ function MonthDetail({ year, month, habits, checks, todayStr, onBack }: {
       </div>
 
       {/* 월간 통계 */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-3 gap-3 mb-4">
         {[
           { label: "평균 달성률", value: `${stats.avgPct}%`, color: "var(--blue)" },
           { label: "완벽한 날", value: `${stats.perfectDays}일`, color: "var(--amber)" },
@@ -419,6 +422,31 @@ function MonthDetail({ year, month, habits, checks, todayStr, onBack }: {
           </div>
         ))}
       </div>
+
+      {/* 금지 목록 통계 */}
+      {forbiddenHabits.length > 0 && (() => {
+        const monthPrefix = `${year}-${String(month + 1).padStart(2, "0")}`;
+        const monthViolations = forbiddenChecks.filter(c => c.checked_date.startsWith(monthPrefix));
+        const violatedDays = new Set(monthViolations.map(c => c.checked_date)).size;
+        const cleanDays = stats.pastDays - violatedDays;
+        const avgViolationRate = stats.pastDays === 0 ? 0
+          : Math.round((violatedDays / stats.pastDays) * 100);
+        return (
+          <div className="grid grid-cols-3 gap-3 mb-6">
+            {[
+              { label: "위반 발생일", value: `${violatedDays}일`, color: "#c87070" },
+              { label: "클린 유지일", value: `${cleanDays}일`, color: "var(--blue)" },
+              { label: "총 위반 수", value: `${monthViolations.length}회`, color: "var(--text-2)" },
+            ].map(({ label, value, color }) => (
+              <div key={label} className="p-3 rounded-xl text-center"
+                style={{ background: "rgba(200,80,80,0.03)", border: "1px solid rgba(200,80,80,0.12)" }}>
+                <p className="label-text mb-1">🚫 {label}</p>
+                <p className="text-sm font-bold" style={{ color }}>{value}</p>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* 주차별 컬럼 */}
       <div className="space-y-4">
@@ -491,6 +519,29 @@ function MonthDetail({ year, month, habits, checks, todayStr, onBack }: {
                 ))}
               </div>
             )}
+            {forbiddenHabits.length > 0 && !selectedDetail.isFuture && (
+              <div className="mt-3 pt-3" style={{ borderTop: "1px solid rgba(200,80,80,0.1)" }}>
+                <p className="label-text mb-2">🚫 금지 목록</p>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {forbiddenHabits.map(h => {
+                    const violated = forbiddenChecks.some(c => c.habit_id === h.id && c.checked_date === selectedDate);
+                    return (
+                      <div key={h.id} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
+                        style={{
+                          background: violated ? "rgba(200,80,80,0.07)" : "rgba(136,192,224,0.05)",
+                          border: violated ? "1px solid rgba(200,80,80,0.2)" : "1px solid rgba(136,192,224,0.15)",
+                        }}>
+                        <span className="text-xs">{h.icon}</span>
+                        <span className="text-[9px]" style={{ color: violated ? "#c87070" : "var(--blue-dim)" }}>{h.name}</span>
+                        {violated
+                          ? <X className="w-2.5 h-2.5" style={{ color: "#c87070" }} />
+                          : <Check className="w-2.5 h-2.5" style={{ color: "var(--blue)" }} />}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -504,6 +555,7 @@ function MonthDetail({ year, month, habits, checks, todayStr, onBack }: {
 // ─── 메인: 연간 월별 개요 ─────────────────────────────────
 export function MonthlyView() {
   const { habits, checks, loading } = useHabits();
+  const { habits: forbiddenHabits, checks: forbiddenChecks } = useForbidden();
   const today = new Date();
   const todayStr = today.toISOString().slice(0, 10);
 
@@ -527,6 +579,7 @@ export function MonthlyView() {
           key={`${viewYear}-${detailMonth}`}
           year={viewYear} month={detailMonth}
           habits={habits} checks={checks}
+          forbiddenHabits={forbiddenHabits} forbiddenChecks={forbiddenChecks}
           todayStr={todayStr}
           onBack={() => setDetailMonth(null)}
         />

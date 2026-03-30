@@ -6,6 +6,8 @@ import { Check, X, Minus } from "lucide-react";
 import { useHabits, toLocalDateStr } from "@/lib/habit-context";
 import type { Habit, HabitCheck } from "@/lib/supabase";
 import { AiCoach } from "@/components/dashboard/AiCoach";
+import { useForbidden } from "@/lib/forbidden-context";
+import type { ForbiddenHabit, ForbiddenCheck } from "@/lib/forbidden-context";
 
 const DAY_SHORT = ["일","월","화","수","목","금","토"];
 
@@ -89,10 +91,12 @@ function TaskItem({ habit, status, delay }: {
   );
 }
 
-function DayColumn({ dayInfo, habits, checks, colIdx, selected, onSelect }: {
+function DayColumn({ dayInfo, habits, checks, forbiddenHabits, forbiddenChecks, colIdx, selected, onSelect }: {
   dayInfo: DayInfo;
   habits: Habit[];
   checks: HabitCheck[];
+  forbiddenHabits: ForbiddenHabit[];
+  forbiddenChecks: ForbiddenCheck[];
   colIdx: number;
   selected: boolean;
   onSelect: () => void;
@@ -169,6 +173,42 @@ function DayColumn({ dayInfo, habits, checks, colIdx, selected, onSelect }: {
             </div>
           </div>
         )}
+        {forbiddenHabits.length > 0 && !isFuture && (
+          <div className="mx-3 mb-3 mt-2 p-2 rounded-lg" style={{ background: "rgba(200,80,80,0.04)", border: "1px solid rgba(200,80,80,0.1)" }}>
+            <p className="label-text mb-1.5" style={{ color: "rgba(200,100,100,0.6)" }}>🚫 금지 목록</p>
+            <div className="space-y-0.5">
+              {forbiddenHabits.map(h => {
+                const violated = forbiddenChecks.some(c => c.habit_id === h.id && c.checked_date === dateStr);
+                return (
+                  <div key={h.id} className="flex items-center gap-1.5">
+                    <div className="w-3 h-3 rounded-sm flex items-center justify-center flex-shrink-0"
+                      style={{
+                        background: violated ? "rgba(200,80,80,0.15)" : "rgba(136,192,224,0.06)",
+                        border: violated ? "1px solid rgba(200,80,80,0.3)" : "1px solid rgba(136,192,224,0.15)",
+                      }}>
+                      {violated
+                        ? <X className="w-1.5 h-1.5" style={{ color: "#c87070" }} />
+                        : <Check className="w-1.5 h-1.5" style={{ color: "var(--blue)" }} />}
+                    </div>
+                    <span className="text-[9px]">{h.icon}</span>
+                    <span className="text-[9px] truncate" style={{ color: violated ? "#8a6060" : "var(--text-3)" }}>
+                      {h.name}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="flex items-center justify-between mt-1.5 pt-1.5" style={{ borderTop: "1px solid rgba(200,80,80,0.08)" }}>
+              <span className="label-text">위반</span>
+              <span className="text-[10px] font-semibold tabular-nums" style={{
+                color: forbiddenChecks.filter(c => c.checked_date === dateStr).length > 0 ? "#c87070" : "var(--blue-dim)",
+                fontFamily: "var(--font-en)"
+              }}>
+                {forbiddenChecks.filter(c => c.checked_date === dateStr).length}/{forbiddenHabits.length}
+              </span>
+            </div>
+          </div>
+        )}
       </div>
     </motion.div>
   );
@@ -176,6 +216,7 @@ function DayColumn({ dayInfo, habits, checks, colIdx, selected, onSelect }: {
 
 export function WeeklyView() {
   const { habits, checks, weekDates, loading } = useHabits();
+  const { habits: forbiddenHabits, checks: forbiddenChecks } = useForbidden();
 
   const dayInfos: DayInfo[] = useMemo(() => {
     const today = toLocalDateStr(new Date());
@@ -239,6 +280,8 @@ export function WeeklyView() {
               dayInfo={d}
               habits={habits}
               checks={checks}
+              forbiddenHabits={forbiddenHabits}
+              forbiddenChecks={forbiddenChecks}
               colIdx={i}
               selected={selected === i}
               onSelect={() => setSelected(i)}
@@ -288,6 +331,29 @@ export function WeeklyView() {
               <p className="text-xs" style={{ color: "var(--text-3)" }}>아직 루틴이 없어요.</p>
             )}
           </div>
+          {forbiddenHabits.length > 0 && !selectedDay?.isFuture && (
+            <div className="mt-3 pt-3" style={{ borderTop: "1px solid rgba(200,80,80,0.1)" }}>
+              <span className="label-text mr-2">🚫 금지 목록</span>
+              <div className="flex items-center gap-2 flex-wrap mt-2">
+                {forbiddenHabits.map(h => {
+                  const violated = forbiddenChecks.some(c => c.habit_id === h.id && c.checked_date === selectedDay?.dateStr);
+                  return (
+                    <div key={h.id} className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg"
+                      style={{
+                        background: violated ? "rgba(200,80,80,0.07)" : "rgba(136,192,224,0.05)",
+                        border: violated ? "1px solid rgba(200,80,80,0.2)" : "1px solid rgba(136,192,224,0.15)",
+                      }}>
+                      <span className="text-xs">{h.icon}</span>
+                      <span className="text-[9px]" style={{ color: violated ? "#c87070" : "var(--blue-dim)" }}>{h.name}</span>
+                      {violated
+                        ? <X className="w-2.5 h-2.5" style={{ color: "#c87070" }} />
+                        : <Check className="w-2.5 h-2.5" style={{ color: "var(--blue)" }} />}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
         </motion.div>
       </AnimatePresence>
     </motion.div>
