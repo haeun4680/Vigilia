@@ -214,9 +214,10 @@ function calcMonthStats(year: number, month: number, habits: Habit[], checks: Ha
 }
 
 // ─── 월별 카드 (연간 개요) ────────────────────────────────
-function MonthCard({ year, month, habits, checks, todayStr, isCurrentMonth, isFuture, onClick }: {
+function MonthCard({ year, month, habits, checks, forbiddenHabits, forbiddenChecks, todayStr, isCurrentMonth, isFuture, onClick }: {
   year: number; month: number;
   habits: Habit[]; checks: HabitCheck[];
+  forbiddenHabits: ForbiddenHabit[]; forbiddenChecks: ForbiddenCheck[];
   todayStr: string; isCurrentMonth: boolean; isFuture: boolean;
   onClick: () => void;
 }) {
@@ -226,6 +227,15 @@ function MonthCard({ year, month, habits, checks, todayStr, isCurrentMonth, isFu
   );
 
   const pctColor = stats.avgPct >= 80 ? "var(--blue)" : stats.avgPct >= 50 ? "var(--amber)" : stats.avgPct > 0 ? "#c87070" : "var(--text-4)";
+
+  const forbiddenCleanRate = useMemo(() => {
+    if (forbiddenHabits.length === 0 || stats.pastDays === 0) return null;
+    const monthPrefix = `${year}-${String(month + 1).padStart(2, "0")}`;
+    const violatedDays = new Set(
+      forbiddenChecks.filter(c => c.checked_date.startsWith(monthPrefix)).map(c => c.checked_date)
+    ).size;
+    return Math.round(((stats.pastDays - violatedDays) / stats.pastDays) * 100);
+  }, [forbiddenHabits, forbiddenChecks, year, month, stats.pastDays]);
 
   return (
     <motion.div
@@ -268,6 +278,26 @@ function MonthCard({ year, month, habits, checks, todayStr, isCurrentMonth, isFu
               {stats.perfectDays}일 완벽
             </span>
           </div>
+          {forbiddenCleanRate !== null && (
+            <>
+              <div className="h-0.5 rounded-full overflow-hidden" style={{ background: "rgba(200,80,80,0.1)" }}>
+                <motion.div className="h-full rounded-full"
+                  initial={{ width: 0 }}
+                  animate={{ width: `${forbiddenCleanRate}%` }}
+                  transition={{ duration: 0.7, ease: "easeOut", delay: 0.15 }}
+                  style={{
+                    background: forbiddenCleanRate === 100 ? "var(--blue)" : forbiddenCleanRate >= 60 ? "var(--amber)" : "#c87070",
+                  }} />
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[9px]" style={{ color: "var(--text-4)" }}>🚫 자제율</span>
+                <span className="text-[9px] font-semibold" style={{
+                  color: forbiddenCleanRate === 100 ? "var(--blue)" : forbiddenCleanRate >= 60 ? "var(--amber)" : "#c87070",
+                  fontFamily: "var(--font-en)"
+                }}>{forbiddenCleanRate}%</span>
+              </div>
+            </>
+          )}
         </>
       ) : (
         <div className="text-[9px]" style={{ color: "var(--text-4)" }}>
@@ -429,21 +459,32 @@ function MonthDetail({ year, month, habits, checks, forbiddenHabits, forbiddenCh
         const monthViolations = forbiddenChecks.filter(c => c.checked_date.startsWith(monthPrefix));
         const violatedDays = new Set(monthViolations.map(c => c.checked_date)).size;
         const cleanDays = stats.pastDays - violatedDays;
-        const avgViolationRate = stats.pastDays === 0 ? 0
-          : Math.round((violatedDays / stats.pastDays) * 100);
+        const cleanRate = stats.pastDays === 0 ? 0 : Math.round((cleanDays / stats.pastDays) * 100);
+        const rateColor = cleanRate === 100 ? "var(--blue)" : cleanRate >= 60 ? "var(--amber)" : "#c87070";
         return (
-          <div className="grid grid-cols-3 gap-3 mb-6">
-            {[
-              { label: "위반 발생일", value: `${violatedDays}일`, color: "#c87070" },
-              { label: "클린 유지일", value: `${cleanDays}일`, color: "var(--blue)" },
-              { label: "총 위반 수", value: `${monthViolations.length}회`, color: "var(--text-2)" },
-            ].map(({ label, value, color }) => (
-              <div key={label} className="p-3 rounded-xl text-center"
-                style={{ background: "rgba(200,80,80,0.03)", border: "1px solid rgba(200,80,80,0.12)" }}>
-                <p className="label-text mb-1">🚫 {label}</p>
-                <p className="text-sm font-bold" style={{ color }}>{value}</p>
-              </div>
-            ))}
+          <div className="mb-6 p-3 rounded-xl" style={{ background: "rgba(200,80,80,0.03)", border: "1px solid rgba(200,80,80,0.12)" }}>
+            <div className="flex items-center justify-between mb-2">
+              <span className="label-text">🚫 금지 목록 자제율</span>
+              <span className="text-sm font-bold" style={{ color: rateColor, fontFamily: "var(--font-en)" }}>{cleanRate}%</span>
+            </div>
+            <div className="h-1.5 rounded-full overflow-hidden mb-3" style={{ background: "rgba(200,80,80,0.1)" }}>
+              <motion.div className="h-full rounded-full"
+                initial={{ width: 0 }} animate={{ width: `${cleanRate}%` }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
+                style={{ background: rateColor, boxShadow: `0 0 6px ${rateColor}40` }} />
+            </div>
+            <div className="grid grid-cols-3 gap-2">
+              {[
+                { label: "클린 유지일", value: `${cleanDays}일`, color: "var(--blue)" },
+                { label: "위반 발생일", value: `${violatedDays}일`, color: "#c87070" },
+                { label: "총 위반 수", value: `${monthViolations.length}회`, color: "var(--text-3)" },
+              ].map(({ label, value, color }) => (
+                <div key={label} className="text-center">
+                  <p className="label-text mb-0.5">{label}</p>
+                  <p className="text-xs font-bold" style={{ color }}>{value}</p>
+                </div>
+              ))}
+            </div>
           </div>
         );
       })()}
@@ -632,6 +673,7 @@ export function MonthlyView() {
               <MonthCard
                 year={viewYear} month={i}
                 habits={habits} checks={checks}
+                forbiddenHabits={forbiddenHabits} forbiddenChecks={forbiddenChecks}
                 todayStr={todayStr}
                 isCurrentMonth={isCurrent}
                 isFuture={isFuture}

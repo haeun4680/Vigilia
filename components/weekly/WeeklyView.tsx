@@ -198,15 +198,25 @@ function DayColumn({ dayInfo, habits, checks, forbiddenHabits, forbiddenChecks, 
                 );
               })}
             </div>
-            <div className="flex items-center justify-between mt-1.5 pt-1.5" style={{ borderTop: "1px solid rgba(200,80,80,0.08)" }}>
-              <span className="label-text">위반</span>
-              <span className="text-[10px] font-semibold tabular-nums" style={{
-                color: forbiddenChecks.filter(c => c.checked_date === dateStr).length > 0 ? "#c87070" : "var(--blue-dim)",
-                fontFamily: "var(--font-en)"
-              }}>
-                {forbiddenChecks.filter(c => c.checked_date === dateStr).length}/{forbiddenHabits.length}
-              </span>
-            </div>
+            {(() => {
+              const violatedCount = forbiddenChecks.filter(c => c.checked_date === dateStr).length;
+              const cleanRate = Math.round(((forbiddenHabits.length - violatedCount) / forbiddenHabits.length) * 100);
+              const rateColor = cleanRate === 100 ? "var(--blue)" : cleanRate >= 60 ? "var(--amber)" : "#c87070";
+              return (
+                <div className="mt-1.5 pt-1.5" style={{ borderTop: "1px solid rgba(200,80,80,0.08)" }}>
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="label-text">자제율</span>
+                    <span className="text-[10px] font-semibold tabular-nums" style={{ color: rateColor, fontFamily: "var(--font-en)" }}>
+                      {cleanRate}%
+                    </span>
+                  </div>
+                  <div className="h-1 rounded-full overflow-hidden" style={{ background: "rgba(200,80,80,0.1)" }}>
+                    <div className="h-full rounded-full transition-all duration-500"
+                      style={{ width: `${cleanRate}%`, background: rateColor, boxShadow: cleanRate > 0 ? `0 0 4px ${rateColor}60` : "none" }} />
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         )}
       </div>
