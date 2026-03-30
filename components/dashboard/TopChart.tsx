@@ -37,11 +37,14 @@ function getRanges() {
   ];
 }
 
-function buildChartData(habits: any[], checks: any[], days: number) {
+function buildChartData(habits: any[], checks: any[], days: number, fromMonthStart = false) {
   const today = new Date();
+  const startDate = fromMonthStart
+    ? new Date(today.getFullYear(), today.getMonth(), 1)
+    : (() => { const d = new Date(today); d.setDate(today.getDate() - (days - 1)); return d; })();
   return Array.from({ length: days }, (_, i) => {
-    const d = new Date(today);
-    d.setDate(today.getDate() - (days - 1) + i);
+    const d = new Date(startDate);
+    d.setDate(startDate.getDate() + i);
     const dateStr = toLocalDateStr(d);
     const isFuture = d > today;
 
@@ -73,7 +76,7 @@ export function TopChart() {
   const days = RANGES.find(r => r.key === range)!.days;
 
   const data = useMemo(() => {
-    const base = buildChartData(habits, checks, days);
+    const base = buildChartData(habits, checks, days, range === "1M");
     return base.map(d => {
       if (forbiddenHabits.length === 0) return { ...d, violationRate: null };
       const violated = forbiddenChecks.filter(c => c.checked_date === d.dateStr).length;

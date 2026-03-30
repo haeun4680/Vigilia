@@ -146,11 +146,10 @@ function SortableRow({ habit, rowIdx, monthDates, checks, editingId, editIcon, e
               transition={{ duration: 0.3, ease: [0.34, 1.56, 0.64, 1] }}
               style={{
                 width: 18, height: 18,
-                background: checked ? "rgba(136,192,224,0.16)" : isToday ? "rgba(136,192,224,0.05)" : "transparent",
-                border: checked ? "1px solid rgba(136,192,224,0.45)" : isToday ? "1px solid rgba(136,192,224,0.2)" : "1px solid transparent",
+                background: checked ? "rgba(136,192,224,0.16)" : "transparent",
+                border: checked ? "1px solid rgba(136,192,224,0.45)" : isToday ? "1px solid rgba(136,192,224,0.2)" : isFuture ? "1px dashed rgba(136,192,224,0.2)" : "1px solid transparent",
                 boxShadow: checked ? "0 0 8px rgba(136,192,224,0.3)" : "none",
                 cursor: isFuture ? "default" : "pointer",
-                opacity: isFuture ? 0.4 : 1,
               }}>
               <AnimatePresence>
                 {ripples[rippleKey] && (
@@ -166,9 +165,7 @@ function SortableRow({ habit, rowIdx, monthDates, checks, editingId, editIcon, e
               </AnimatePresence>
               {checked ? (
                 <Check className="w-3 h-3" style={{ color: "var(--blue)", filter: "drop-shadow(0 0 3px rgba(136,192,224,0.8))" }} />
-              ) : isFuture ? (
-                <div className="w-1 h-1 rounded-full" style={{ background: "rgba(136,192,224,0.15)" }} />
-              ) : (
+              ) : !isFuture && (
                 <div className="w-1 h-1 rounded-full"
                   style={{ background: isPast ? "rgba(136,192,224,0.2)" : "rgba(136,192,224,0.35)" }} />
               )}
@@ -287,7 +284,7 @@ export function HabitGrid() {
                     {d.dayShort}
                   </span>
                   <span className="text-[10px] font-semibold tabular-nums"
-                    style={{ color: d.isToday ? "var(--blue)" : d.isFuture ? "var(--text-4)" : "var(--text-3)" }}>
+                    style={{ color: d.isToday ? "var(--blue)" : d.isFuture ? "var(--text-3)" : "var(--text-3)" }}>
                     {d.date}
                   </span>
                 </div>
