@@ -182,11 +182,13 @@ export function ForbiddenGrid() {
                           border: violated ? "1px solid rgba(200,80,80,0.5)" : isToday ? "1px solid rgba(200,80,80,0.2)" : "1px solid transparent",
                           boxShadow: violated ? "0 0 8px rgba(200,80,80,0.3)" : "none",
                           cursor: isFuture ? "default" : "pointer",
-                          opacity: isFuture ? 0.25 : 1,
+                          opacity: isFuture ? 0.4 : 1,
                         }}>
                         {violated ? (
                           <X className="w-3 h-3" style={{ color: "#c87070", filter: "drop-shadow(0 0 3px rgba(200,80,80,0.8))" }} />
-                        ) : isFuture ? null : (
+                        ) : isFuture ? (
+                          <div className="w-1 h-1 rounded-full" style={{ background: "rgba(200,80,80,0.1)" }} />
+                        ) : (
                           <div className="w-1 h-1 rounded-full"
                             style={{ background: isPast ? "rgba(200,80,80,0.15)" : "rgba(200,80,80,0.25)" }} />
                         )}

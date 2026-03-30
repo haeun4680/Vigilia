@@ -150,7 +150,7 @@ function SortableRow({ habit, rowIdx, monthDates, checks, editingId, editIcon, e
                 border: checked ? "1px solid rgba(136,192,224,0.45)" : isToday ? "1px solid rgba(136,192,224,0.2)" : "1px solid transparent",
                 boxShadow: checked ? "0 0 8px rgba(136,192,224,0.3)" : "none",
                 cursor: isFuture ? "default" : "pointer",
-                opacity: isFuture ? 0.25 : 1,
+                opacity: isFuture ? 0.4 : 1,
               }}>
               <AnimatePresence>
                 {ripples[rippleKey] && (
@@ -166,7 +166,9 @@ function SortableRow({ habit, rowIdx, monthDates, checks, editingId, editIcon, e
               </AnimatePresence>
               {checked ? (
                 <Check className="w-3 h-3" style={{ color: "var(--blue)", filter: "drop-shadow(0 0 3px rgba(136,192,224,0.8))" }} />
-              ) : isFuture ? null : (
+              ) : isFuture ? (
+                <div className="w-1 h-1 rounded-full" style={{ background: "rgba(136,192,224,0.15)" }} />
+              ) : (
                 <div className="w-1 h-1 rounded-full"
                   style={{ background: isPast ? "rgba(136,192,224,0.2)" : "rgba(136,192,224,0.35)" }} />
               )}
