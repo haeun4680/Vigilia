@@ -100,7 +100,7 @@ export function ForbiddenGrid() {
               </div>
             </th>
             {visibleDates.map((d, i) => (
-              <th key={i} className="pb-3" style={{ minWidth: 28 }}>
+              <th key={i} className="pb-3" style={{ minWidth: 22 }}>
                 <div className="flex flex-col items-center gap-0.5">
                   <span className="text-[8px] font-medium"
                     style={{ color: d.isToday ? "#c87070" : d.isSun ? "rgba(200,100,100,0.6)" : d.isSat ? "rgba(100,150,220,0.6)" : "var(--text-4)" }}>
@@ -177,7 +177,7 @@ export function ForbiddenGrid() {
                         animate={violated ? { scale: [1, 1.25, 0.92, 1] } : { scale: 1 }}
                         transition={{ duration: 0.3, ease: [0.34, 1.56, 0.64, 1] }}
                         style={{
-                          width: 22, height: 22,
+                          width: 18, height: 18,
                           background: violated ? "rgba(200,80,80,0.15)" : isToday ? "rgba(200,80,80,0.05)" : "transparent",
                           border: violated ? "1px solid rgba(200,80,80,0.5)" : isToday ? "1px solid rgba(200,80,80,0.2)" : "1px solid transparent",
                           boxShadow: violated ? "0 0 8px rgba(200,80,80,0.3)" : "none",
