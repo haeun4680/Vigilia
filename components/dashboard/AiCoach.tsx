@@ -4,16 +4,19 @@ import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Sparkles, RefreshCw } from "lucide-react";
 import { useHabits, toLocalDateStr } from "@/lib/habit-context";
+import { useForbidden } from "@/lib/forbidden-context";
 
 type CoachResult = {
   strength: string;
   improve: string;
   tip: string;
+  forbidden: string;
   score: number;
 };
 
 export function AiCoach() {
   const { habits, checks } = useHabits();
+  const { habits: forbiddenHabits, checks: forbiddenChecks } = useForbidden();
   const [result, setResult] = useState<CoachResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -44,6 +47,13 @@ export function AiCoach() {
     const totalDone = habitsPayload.reduce((s, h) => s + h.checks.filter(Boolean).length, 0);
     const weeklyStats = totalPossible === 0 ? 0 : Math.round((totalDone / totalPossible) * 100);
 
+    const forbiddenPayload = forbiddenHabits.map(h => {
+      const violatedDays = weekDates.filter(d =>
+        forbiddenChecks.some(c => c.habit_id === h.id && c.checked_date === d)
+      ).length;
+      return { icon: h.icon ?? "🚫", name: h.name, violatedDays, totalDays: 7 };
+    });
+
     const isInTauri = typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
     const analyzeUrl = isInTauri
       ? "https://habit-tracker-nine-sigma.vercel.app/api/analyze"
@@ -53,7 +63,7 @@ export function AiCoach() {
       const res = await fetch(analyzeUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ habits: habitsPayload, weeklyStats }),
+        body: JSON.stringify({ habits: habitsPayload, weeklyStats, forbidden: forbiddenPayload }),
       });
       const data = await res.json();
       if (data.error) {
@@ -154,6 +164,15 @@ export function AiCoach() {
               <p className="text-[11px] font-semibold" style={{ color: "var(--text-3)" }}>이번 주 팁</p>
               <p className="text-xs leading-relaxed" style={{ color: "var(--text-2)" }}>{result.tip}</p>
             </div>
+
+            {/* 금지 목록 피드백 */}
+            {result.forbidden && (
+              <div className="p-2.5 rounded-lg space-y-1"
+                style={{ background: "rgba(200,80,80,0.04)", border: "1px solid rgba(200,80,80,0.15)" }}>
+                <p className="text-[11px] font-semibold" style={{ color: "#c87070" }}>🚫 금지 목록 피드백</p>
+                <p className="text-xs leading-relaxed" style={{ color: "var(--text-2)" }}>{result.forbidden}</p>
+              </div>
+            )}
           </motion.div>
         )}
 

@@ -9,10 +9,11 @@ import { useForbidden } from "@/lib/forbidden-context";
 import type { ForbiddenHabit, ForbiddenCheck } from "@/lib/forbidden-context";
 
 // ─── AI 코치 ─────────────────────────────────────────────
-type CoachResult = { strength: string; improve: string; tip: string; score: number };
+type CoachResult = { strength: string; improve: string; tip: string; forbidden: string; score: number };
 
-function MonthlyAiCoach({ habits, checks, mode, year, month }: {
+function MonthlyAiCoach({ habits, checks, forbiddenHabits, forbiddenChecks, mode, year, month }: {
   habits: Habit[]; checks: HabitCheck[];
+  forbiddenHabits: ForbiddenHabit[]; forbiddenChecks: ForbiddenCheck[];
   mode: "year" | "month"; year: number; month?: number;
 }) {
   const [result, setResult] = useState<CoachResult | null>(null);
@@ -63,11 +64,19 @@ function MonthlyAiCoach({ habits, checks, mode, year, month }: {
       ? "https://habit-tracker-nine-sigma.vercel.app/api/analyze-monthly"
       : "/api/analyze-monthly";
 
+    const forbiddenPayload = forbiddenHabits.map(h => {
+      const violatedDays = forbiddenChecks.filter(c =>
+        c.habit_id === h.id && c.checked_date >= startStr && c.checked_date <= endStr
+      ).length;
+      const cleanPct = Math.round(((totalDays - violatedDays) / totalDays) * 100);
+      return { icon: h.icon ?? "🚫", name: h.name, violatedDays, totalDays, cleanPct };
+    });
+
     try {
       const res = await fetch(analyzeUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ habits: habitsPayload, avgPct, period, mode }),
+        body: JSON.stringify({ habits: habitsPayload, avgPct, period, mode, forbidden: forbiddenPayload }),
       });
       const data = await res.json();
       if (data.error) {
@@ -146,6 +155,13 @@ function MonthlyAiCoach({ habits, checks, mode, year, month }: {
               <p className="text-[11px] font-semibold" style={{ color: "var(--text-3)" }}>앞으로의 팁</p>
               <p className="text-xs leading-relaxed" style={{ color: "var(--text-2)" }}>{result.tip}</p>
             </div>
+            {result.forbidden && (
+              <div className="p-2.5 rounded-lg space-y-1"
+                style={{ background: "rgba(200,80,80,0.04)", border: "1px solid rgba(200,80,80,0.15)" }}>
+                <p className="text-[11px] font-semibold" style={{ color: "#c87070" }}>🚫 금지 목록 피드백</p>
+                <p className="text-xs leading-relaxed" style={{ color: "var(--text-2)" }}>{result.forbidden}</p>
+              </div>
+            )}
           </motion.div>
         )}
         {!result && !loading && !error && (
@@ -588,7 +604,7 @@ function MonthDetail({ year, month, habits, checks, forbiddenHabits, forbiddenCh
       </AnimatePresence>
 
       {/* 월별 AI 코치 */}
-      <MonthlyAiCoach habits={habits} checks={checks} mode="month" year={year} month={month} />
+      <MonthlyAiCoach habits={habits} checks={checks} forbiddenHabits={forbiddenHabits} forbiddenChecks={forbiddenChecks} mode="month" year={year} month={month} />
     </motion.div>
   );
 }
@@ -689,7 +705,7 @@ export function MonthlyView() {
       </p>
 
       {/* 연간 AI 코치 */}
-      <MonthlyAiCoach habits={habits} checks={checks} mode="year" year={viewYear} />
+      <MonthlyAiCoach habits={habits} checks={checks} forbiddenHabits={forbiddenHabits} forbiddenChecks={forbiddenChecks} mode="year" year={viewYear} />
     </motion.div>
   );
 }

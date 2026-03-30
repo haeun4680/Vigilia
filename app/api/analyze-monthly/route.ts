@@ -8,11 +8,25 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json();
-  const { habits, avgPct, period, mode } = body;
+  const { habits, avgPct, period, mode, forbidden = [] } = body;
 
   const habitSummary = habits
     .map((h: any) => `- ${h.icon} ${h.name}: ${period} 동안 ${h.completedDays}/${h.totalDays}일 완료 (${h.pct}%)`)
     .join("\n");
+
+  const forbiddenSummary = forbidden.length > 0
+    ? forbidden.map((h: any) =>
+        `- ${h.icon} ${h.name}: ${period} 동안 ${h.violatedDays}/${h.totalDays}일 위반 (자제율 ${h.cleanPct}%)`
+      ).join("\n")
+    : null;
+
+  const forbiddenSection = forbiddenSummary
+    ? `\n[금지 목록 현황 - 하면 안 되는 나쁜 습관들]\n${forbiddenSummary}\n`
+    : "";
+
+  const forbiddenField = forbiddenSummary
+    ? `  "forbidden": "금지 목록(나쁜 습관)에 대한 피드백 (1~2문장, 구체적인 항목 이름 포함, 잘 지켰으면 칭찬)",`
+    : `  "forbidden": "",`;
 
   const contextLine = mode === "year"
     ? `올해 ${period} 루틴 분석입니다.`
@@ -25,13 +39,14 @@ ${habitSummary}
 
 [전체 현황]
 - 기간 평균 달성률: ${avgPct}%
-
+${forbiddenSection}
 아래 JSON 형식으로만 응답해주세요. 다른 텍스트는 절대 포함하지 마세요:
 {
   "strength": "잘하고 있는 점 (1~2문장, 구체적인 루틴 이름 포함)",
   "improve": "개선하면 좋을 점 (1~2문장, 구체적인 루틴 이름 포함)",
   "tip": "앞으로의 실천 팁 (1~2문장, 작고 실천 가능한 조언)",
-  "score": 전체적인 루틴 점수 (0~100 숫자)
+  ${forbiddenField}
+  "score": 루틴 달성률과 금지 목록 자제율을 종합한 점수 (0~100 숫자)
 }`;
 
   try {
