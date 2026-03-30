@@ -25,13 +25,17 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
 type RangeKey = "1W" | "1M" | "3M" | "6M" | "1Y";
 
-const RANGES: { key: RangeKey; label: string; days: number }[] = [
-  { key: "1W", label: "1주",  days: 7   },
-  { key: "1M", label: "1달",  days: 30  },
-  { key: "3M", label: "3달",  days: 90  },
-  { key: "6M", label: "6달",  days: 180 },
-  { key: "1Y", label: "올해", days: 365 },
-];
+function getRanges() {
+  const now = new Date();
+  const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  return [
+    { key: "1W" as RangeKey, label: "1주",  days: 7          },
+    { key: "1M" as RangeKey, label: "1달",  days: daysInMonth },
+    { key: "3M" as RangeKey, label: "3달",  days: 90         },
+    { key: "6M" as RangeKey, label: "6달",  days: 180        },
+    { key: "1Y" as RangeKey, label: "올해", days: 365        },
+  ];
+}
 
 function buildChartData(habits: any[], checks: any[], days: number) {
   const today = new Date();
@@ -64,6 +68,7 @@ export function TopChart() {
   const { habits, checks } = useHabits();
   const { habits: forbiddenHabits, checks: forbiddenChecks } = useForbidden();
   const [range, setRange] = useState<RangeKey>("1M");
+  const RANGES = useMemo(() => getRanges(), []);
 
   const days = RANGES.find(r => r.key === range)!.days;
 
