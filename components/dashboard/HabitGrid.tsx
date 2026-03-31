@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Check, Plus, X, Loader2, Pencil, Trash2, GripVertical } from "lucide-react";
 import { createClient } from "@/lib/supabase";
 import { useHabits, toLocalDateStr } from "@/lib/habit-context";
+import { useCoins } from "@/lib/coin-context";
 import type { Habit } from "@/lib/supabase";
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent,
@@ -180,6 +181,7 @@ function SortableRow({ habit, rowIdx, monthDates, checks, editingId, editIcon, e
 export function HabitGrid() {
   const supabase = createClient();
   const { habits, checks, userId, loading, toggleCheck, refresh, reorderHabits } = useHabits();
+  const { checkHabitStreakReward } = useCoins();
   const isMobile = useIsMobile();
 
   const monthDates = useMemo(() => getMonthDates(), []);
@@ -226,8 +228,10 @@ export function HabitGrid() {
       const key = `${habitId}-${dateStr}`;
       setRipples(r => ({ ...r, [key]: Date.now() }));
       setTimeout(() => setRipples(r => { const n = { ...r }; delete n[key]; return n; }), 600);
+      // 이번 주 개근 달성 시 코인 보상 체크
+      checkHabitStreakReward(habitId);
     }
-  }, [toggleCheck, checks]);
+  }, [toggleCheck, checks, checkHabitStreakReward]);
 
   const addHabit = async () => {
     if (!newName.trim() || !userId) return;

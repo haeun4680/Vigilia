@@ -14,6 +14,7 @@ import { createClient } from "@/lib/supabase";
 import { HabitProvider, useHabits, toLocalDateStr } from "@/lib/habit-context";
 import { ChallengeProvider } from "@/lib/challenge-context";
 import { ForbiddenProvider } from "@/lib/forbidden-context";
+import { CoinProvider, useCoins } from "@/lib/coin-context";
 import { ForbiddenGrid } from "@/components/dashboard/ForbiddenGrid";
 import { AutoUpdater } from "@/components/updater/AutoUpdater";
 
@@ -25,6 +26,19 @@ function getGreeting() {
   if (h < 12) return "좋은 아침이에요 🌿";
   if (h < 18) return "오후도 힘내요 ☀️";
   return "오늘 하루도 수고했어요 🌛";
+}
+
+// 코인 뱃지
+function CoinBadge() {
+  const { coins, loading } = useCoins();
+  if (loading) return null;
+  return (
+    <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg"
+      style={{ background: "rgba(255,200,60,0.08)", border: "1px solid rgba(255,200,60,0.2)" }}>
+      <span className="text-sm">🌙</span>
+      <span className="text-sm font-bold tabular-nums" style={{ color: "#f0c040", fontFamily: "var(--font-en)" }}>{coins}</span>
+    </div>
+  );
 }
 
 // 헤더 통계 — 실제 데이터
@@ -152,6 +166,7 @@ export default function Home() {
       </div>
 
       <HabitProvider>
+      <CoinProvider>
       <ChallengeProvider>
       <ForbiddenProvider>
         <div className="relative max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-10 py-7 space-y-4" style={{ zIndex: 1 }}>
@@ -228,6 +243,8 @@ export default function Home() {
 
             {/* 우측: 실제 스탯 + 로그아웃 (데스크톱 전용) */}
             <div className="hidden sm:flex items-center gap-4">
+              <CoinBadge />
+              <div className="w-px h-8" style={{ background: "var(--border-2)" }} />
               <HeaderStats />
               <div className="w-px h-8" style={{ background: "var(--border-2)" }} />
               <div className="flex items-center gap-3">
@@ -311,6 +328,7 @@ export default function Home() {
         </div>
       </ForbiddenProvider>
       </ChallengeProvider>
+      </CoinProvider>
       </HabitProvider>
       <AutoUpdater />
     </div>

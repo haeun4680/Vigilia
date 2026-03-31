@@ -7,6 +7,9 @@ import { useHabits, toLocalDateStr } from "@/lib/habit-context";
 import type { Habit, HabitCheck } from "@/lib/supabase";
 import { useForbidden } from "@/lib/forbidden-context";
 import type { ForbiddenHabit, ForbiddenCheck } from "@/lib/forbidden-context";
+import { useCoins } from "@/lib/coin-context";
+
+const COIN_COST = 100;
 
 // ─── AI 코치 ─────────────────────────────────────────────
 type CoachResult = { strength: string; improve: string; tip: string; forbidden: string; score: number };
@@ -16,13 +19,22 @@ function MonthlyAiCoach({ habits, checks, forbiddenHabits, forbiddenChecks, mode
   forbiddenHabits: ForbiddenHabit[]; forbiddenChecks: ForbiddenCheck[];
   mode: "year" | "month"; year: number; month?: number;
 }) {
+  const { coins, isSubscribed, aiMonthlyUsedAt, spendCoins, markAiMonthlyUsed } = useCoins();
   const [result, setResult] = useState<CoachResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmCoin, setConfirmCoin] = useState(false);
 
-  const analyze = async () => {
+  const now = new Date();
+  const canUseFree = isSubscribed ||
+    !aiMonthlyUsedAt ||
+    aiMonthlyUsedAt.getMonth() !== now.getMonth() ||
+    aiMonthlyUsedAt.getFullYear() !== now.getFullYear();
+
+  const runAnalysis = async () => {
     setLoading(true);
     setError(null);
+    setConfirmCoin(false);
     const todayStr = toLocalDateStr(new Date());
 
     let startStr: string;
@@ -91,6 +103,25 @@ function MonthlyAiCoach({ habits, checks, forbiddenHabits, forbiddenChecks, mode
     }
   };
 
+  const analyze = async () => {
+    if (canUseFree) {
+      await markAiMonthlyUsed();
+      await runAnalysis();
+    } else {
+      setConfirmCoin(true);
+    }
+  };
+
+  const analyzeWithCoin = async () => {
+    const ok = await spendCoins(COIN_COST, "ai_monthly_extra");
+    if (!ok) {
+      setError(`코인이 부족해요. (보유 ${coins}개 / 필요 ${COIN_COST}개)`);
+      setConfirmCoin(false);
+      return;
+    }
+    await runAnalysis();
+  };
+
   const labelText = mode === "year" ? `${year}년 올해 전체 분석` : `${year}년 ${month! + 1}월 분석`;
   const scoreLabel = mode === "year" ? "올해 루틴 점수" : `${month! + 1}월 루틴 점수`;
 
@@ -105,20 +136,68 @@ function MonthlyAiCoach({ habits, checks, forbiddenHabits, forbiddenChecks, mode
             style={{ background: "rgba(136,192,224,0.08)", color: "var(--blue-dim)", border: "1px solid rgba(136,192,224,0.15)" }}>
             {labelText}
           </span>
+          {!canUseFree && !isSubscribed && (
+            <span className="text-[10px] px-1.5 py-0.5 rounded-full"
+              style={{ background: "rgba(255,200,60,0.08)", color: "#f0c040", border: "1px solid rgba(255,200,60,0.2)" }}>
+              이번 달 사용함
+            </span>
+          )}
         </div>
-        <motion.button onClick={analyze} disabled={loading || habits.length === 0}
-          whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
-          style={{
-            background: "rgba(136,192,224,0.1)", border: "1px solid rgba(136,192,224,0.25)",
-            color: "var(--blue)", opacity: (loading || habits.length === 0) ? 0.5 : 1,
-          }}>
-          <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} />
-          {loading ? "분석 중..." : result ? "재분석" : "분석하기"}
-        </motion.button>
+        <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 px-2 py-1 rounded-lg"
+            style={{ background: "rgba(255,200,60,0.08)", border: "1px solid rgba(255,200,60,0.2)" }}>
+            <span className="text-xs">🌙</span>
+            <span className="text-xs font-bold tabular-nums" style={{ color: "#f0c040" }}>{coins}</span>
+          </div>
+          <motion.button onClick={analyze} disabled={loading || habits.length === 0}
+            whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
+            style={{
+              background: "rgba(136,192,224,0.1)", border: "1px solid rgba(136,192,224,0.25)",
+              color: "var(--blue)", opacity: (loading || habits.length === 0) ? 0.5 : 1,
+            }}>
+            <RefreshCw className={`w-3 h-3 ${loading ? "animate-spin" : ""}`} />
+            {loading ? "분석 중..." : result ? "재분석" : "분석하기"}
+          </motion.button>
+        </div>
       </div>
 
       <AnimatePresence mode="wait">
+        {confirmCoin && !loading && (
+          <motion.div key="confirm" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+            className="p-3 rounded-xl space-y-2.5"
+            style={{ background: "rgba(255,200,60,0.04)", border: "1px solid rgba(255,200,60,0.2)" }}>
+            <p className="text-xs font-medium" style={{ color: "var(--text-2)" }}>
+              이번 달 무료 분석을 이미 사용했어요.
+            </p>
+            <p className="text-[11px]" style={{ color: "var(--text-3)" }}>
+              🌙 달빛 코인 {COIN_COST}개로 추가 분석할까요? (보유: {coins}개)
+            </p>
+            <div className="flex gap-2">
+              <motion.button onClick={analyzeWithCoin} disabled={coins < COIN_COST}
+                whileTap={{ scale: 0.95 }}
+                className="flex-1 py-1.5 rounded-lg text-xs font-semibold"
+                style={{
+                  background: coins >= COIN_COST ? "rgba(255,200,60,0.15)" : "rgba(136,192,224,0.05)",
+                  border: `1px solid ${coins >= COIN_COST ? "rgba(255,200,60,0.35)" : "var(--border-2)"}`,
+                  color: coins >= COIN_COST ? "#f0c040" : "var(--text-4)",
+                  opacity: coins < COIN_COST ? 0.5 : 1,
+                }}>
+                {coins < COIN_COST ? `코인 부족 (${coins}/${COIN_COST})` : `🌙 ${COIN_COST}코인 사용`}
+              </motion.button>
+              <motion.button onClick={() => setConfirmCoin(false)} whileTap={{ scale: 0.95 }}
+                className="px-3 py-1.5 rounded-lg text-xs"
+                style={{ border: "1px solid var(--border-2)", color: "var(--text-4)" }}>
+                취소
+              </motion.button>
+            </div>
+            {coins < COIN_COST && (
+              <p className="text-[10px]" style={{ color: "var(--text-4)" }}>
+                💡 루틴을 일주일 연속 달성하면 10코인을 획득해요!
+              </p>
+            )}
+          </motion.div>
+        )}
         {loading && (
           <motion.div key="loading" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="py-6 flex flex-col items-center gap-2">
@@ -127,14 +206,14 @@ function MonthlyAiCoach({ habits, checks, forbiddenHabits, forbiddenChecks, mode
             <p className="text-xs" style={{ color: "var(--text-3)" }}>루틴을 분석하는 중...</p>
           </motion.div>
         )}
-        {error && !loading && (
+        {error && !loading && !confirmCoin && (
           <motion.div key="error" initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             className="p-3 rounded-lg text-xs"
             style={{ background: "rgba(248,113,113,0.08)", color: "#f87171", border: "1px solid rgba(248,113,113,0.2)" }}>
             {error}
           </motion.div>
         )}
-        {result && !loading && (
+        {result && !loading && !confirmCoin && (
           <motion.div key="result" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
             className="space-y-2.5">
             <div className="flex items-center justify-between p-3 rounded-xl"
@@ -164,7 +243,7 @@ function MonthlyAiCoach({ habits, checks, forbiddenHabits, forbiddenChecks, mode
             )}
           </motion.div>
         )}
-        {!result && !loading && !error && (
+        {!result && !loading && !error && !confirmCoin && (
           <motion.div key="empty" initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="py-3 text-center">
             <p className="text-xs" style={{ color: "var(--text-4)" }}>분석하기 버튼을 눌러 AI 코칭을 받아보세요</p>
           </motion.div>
