@@ -17,6 +17,7 @@ import { ForbiddenProvider } from "@/lib/forbidden-context";
 import { CoinProvider, useCoins } from "@/lib/coin-context";
 import { ForbiddenGrid } from "@/components/dashboard/ForbiddenGrid";
 import { AutoUpdater } from "@/components/updater/AutoUpdater";
+import { JourneyView } from "@/components/journey/JourneyView";
 
 type Tab = "dashboard" | "weekly" | "monthly";
 
@@ -306,7 +307,9 @@ export default function Home() {
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -10, scale: 0.99 }}
                 transition={{ type: "spring", stiffness: 280, damping: 28 }}
+                className="space-y-4"
               >
+                <section className="dawn-card p-4 sm:p-6"><JourneyView /></section>
                 <section className="dawn-card p-4 sm:p-6"><WeeklyView /></section>
               </motion.div>
             )}

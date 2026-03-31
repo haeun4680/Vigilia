@@ -9,11 +9,13 @@ type CoinContextType = {
   isSubscribed: boolean;
   aiWeeklyUsedAt: Date | null;
   aiMonthlyUsedAt: Date | null;
+  journeyStartDate: string | null; // YYYY-MM-DD
   loading: boolean;
   spendCoins: (amount: number, reason: string) => Promise<boolean>;
-  checkHabitStreakReward: (habitId: string) => Promise<boolean>; // returns true if rewarded
+  checkHabitStreakReward: (habitId: string) => Promise<boolean>;
   markAiWeeklyUsed: () => Promise<void>;
   markAiMonthlyUsed: () => Promise<void>;
+  saveJourneyStartDate: (date: string) => Promise<void>;
 };
 
 const CoinContext = createContext<CoinContextType | null>(null);
@@ -31,6 +33,7 @@ export function CoinProvider({ children }: { children: ReactNode }) {
   const [isSubscribed, setIsSubscribed] = useState(false);
   const [aiWeeklyUsedAt, setAiWeeklyUsedAt] = useState<Date | null>(null);
   const [aiMonthlyUsedAt, setAiMonthlyUsedAt] = useState<Date | null>(null);
+  const [journeyStartDate, setJourneyStartDate] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   const loadCoins = useCallback(async (uid: string) => {
@@ -45,6 +48,7 @@ export function CoinProvider({ children }: { children: ReactNode }) {
       setIsSubscribed(data.is_subscribed ?? false);
       setAiWeeklyUsedAt(data.ai_weekly_used_at ? new Date(data.ai_weekly_used_at) : null);
       setAiMonthlyUsedAt(data.ai_monthly_used_at ? new Date(data.ai_monthly_used_at) : null);
+      setJourneyStartDate(data.journey_start_date ?? null);
     } else {
       // 첫 로그인 시 row 생성
       await supabase.from("user_coins").insert({ user_id: uid, balance: 0 });
@@ -154,6 +158,14 @@ export function CoinProvider({ children }: { children: ReactNode }) {
       .eq("user_id", userId);
   }, [userId, supabase]);
 
+  const saveJourneyStartDate = useCallback(async (date: string) => {
+    if (!userId) return;
+    setJourneyStartDate(date);
+    await supabase.from("user_coins")
+      .update({ journey_start_date: date })
+      .eq("user_id", userId);
+  }, [userId, supabase]);
+
   const markAiMonthlyUsed = useCallback(async () => {
     if (!userId) return;
     const now = new Date();
@@ -165,8 +177,8 @@ export function CoinProvider({ children }: { children: ReactNode }) {
 
   return (
     <CoinContext.Provider value={{
-      coins, isSubscribed, aiWeeklyUsedAt, aiMonthlyUsedAt, loading,
-      spendCoins, checkHabitStreakReward, markAiWeeklyUsed, markAiMonthlyUsed,
+      coins, isSubscribed, aiWeeklyUsedAt, aiMonthlyUsedAt, journeyStartDate, loading,
+      spendCoins, checkHabitStreakReward, markAiWeeklyUsed, markAiMonthlyUsed, saveJourneyStartDate,
     }}>
       {children}
     </CoinContext.Provider>
