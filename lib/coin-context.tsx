@@ -50,8 +50,9 @@ export function CoinProvider({ children }: { children: ReactNode }) {
       setAiMonthlyUsedAt(data.ai_monthly_used_at ? new Date(data.ai_monthly_used_at) : null);
       setJourneyStartDate(data.journey_start_date ?? null);
     } else {
-      // 첫 로그인 시 row 생성
-      await supabase.from("user_coins").insert({ user_id: uid, balance: 0 });
+      // 첫 로그인: upsert로 안전하게 row 생성
+      await supabase.from("user_coins")
+        .upsert({ user_id: uid, balance: 0 }, { onConflict: "user_id" });
     }
     setLoading(false);
   }, [supabase]);
@@ -154,16 +155,14 @@ export function CoinProvider({ children }: { children: ReactNode }) {
     const now = new Date();
     setAiWeeklyUsedAt(now);
     await supabase.from("user_coins")
-      .update({ ai_weekly_used_at: now.toISOString() })
-      .eq("user_id", userId);
+      .upsert({ user_id: userId, ai_weekly_used_at: now.toISOString() }, { onConflict: "user_id" });
   }, [userId, supabase]);
 
   const saveJourneyStartDate = useCallback(async (date: string) => {
     if (!userId) return;
     setJourneyStartDate(date);
     await supabase.from("user_coins")
-      .update({ journey_start_date: date })
-      .eq("user_id", userId);
+      .upsert({ user_id: userId, journey_start_date: date }, { onConflict: "user_id" });
   }, [userId, supabase]);
 
   const markAiMonthlyUsed = useCallback(async () => {
@@ -171,8 +170,7 @@ export function CoinProvider({ children }: { children: ReactNode }) {
     const now = new Date();
     setAiMonthlyUsedAt(now);
     await supabase.from("user_coins")
-      .update({ ai_monthly_used_at: now.toISOString() })
-      .eq("user_id", userId);
+      .upsert({ user_id: userId, ai_monthly_used_at: now.toISOString() }, { onConflict: "user_id" });
   }, [userId, supabase]);
 
   return (

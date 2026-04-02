@@ -48,19 +48,25 @@ ${forbiddenSection}
   "score": 전체적인 루틴 점수와 금지 목록 자제율을 종합한 점수 (0~100 숫자)
 }`;
 
-  try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
-    const result = await model.generateContent(prompt);
-    const text = result.response.text().trim();
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
 
-    // JSON 파싱 — 마크다운 코드블록 제거
-    const cleaned = text.replace(/```json\n?|\n?```/g, "").trim();
-    const json = JSON.parse(cleaned);
-
-    return NextResponse.json(json);
-  } catch (e: any) {
-    console.error("Gemini error:", e);
-    return NextResponse.json({ error: e.message }, { status: 500 });
+  // 503 대비 최대 2회 재시도
+  for (let attempt = 1; attempt <= 2; attempt++) {
+    try {
+      const result = await model.generateContent(prompt);
+      const text = result.response.text().trim();
+      const cleaned = text.replace(/```json\n?|\n?```/g, "").trim();
+      const json = JSON.parse(cleaned);
+      return NextResponse.json(json);
+    } catch (e: any) {
+      const is503 = e.message?.includes("503") || e.message?.includes("Service Unavailable");
+      if (is503 && attempt < 2) {
+        await new Promise(r => setTimeout(r, 2000)); // 2초 대기 후 재시도
+        continue;
+      }
+      console.error("Gemini error:", e);
+      return NextResponse.json({ error: e.message }, { status: 500 });
+    }
   }
 }
