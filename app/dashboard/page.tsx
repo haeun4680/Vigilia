@@ -18,6 +18,7 @@ import { CoinProvider, useCoins } from "@/lib/coin-context";
 import { ForbiddenGrid } from "@/components/dashboard/ForbiddenGrid";
 import { AutoUpdater } from "@/components/updater/AutoUpdater";
 import { JourneyView } from "@/components/journey/JourneyView";
+import { AutoMigrate } from "@/components/AutoMigrate";
 
 type Tab = "dashboard" | "weekly" | "monthly";
 
@@ -334,6 +335,7 @@ export default function Home() {
       </CoinProvider>
       </HabitProvider>
       <AutoUpdater />
+      <AutoMigrate />
     </div>
   );
 }
