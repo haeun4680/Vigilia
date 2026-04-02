@@ -20,17 +20,21 @@ type CoachResult = {
 export function AiCoach() {
   const { habits, checks } = useHabits();
   const { habits: forbiddenHabits, checks: forbiddenChecks } = useForbidden();
-  const { coins, isSubscribed, aiWeeklyUsedAt, spendCoins, markAiWeeklyUsed } = useCoins();
+  const { coins, isSubscribed, spendCoins, markAiWeeklyUsed } = useCoins();
 
   const [result, setResult] = useState<CoachResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmCoin, setConfirmCoin] = useState(false);
 
-  // 무료 사용 가능 여부 (구독자 or 7일 초과)
-  const canUseFree = isSubscribed ||
-    !aiWeeklyUsedAt ||
-    (Date.now() - aiWeeklyUsedAt.getTime() > 7 * 24 * 60 * 60 * 1000);
+  // 무료 사용 가능 여부 — localStorage 기준 (DB 비동기 타이밍 문제 회피)
+  const WEEKLY_KEY = "ai_coach_weekly_used";
+  const checkCanUseFree = () => {
+    if (isSubscribed) return true;
+    const last = localStorage.getItem(WEEKLY_KEY);
+    if (!last) return true;
+    return Date.now() - Number(last) > 7 * 24 * 60 * 60 * 1000;
+  };
 
   const buildPayload = () => {
     const today = new Date();
@@ -95,11 +99,11 @@ export function AiCoach() {
   };
 
   const analyze = async () => {
-    if (canUseFree) {
-      await markAiWeeklyUsed();
+    if (checkCanUseFree()) {
+      localStorage.setItem(WEEKLY_KEY, String(Date.now())); // 즉시 기록
+      markAiWeeklyUsed(); // DB 동기화 (fire-and-forget)
       await runAnalysis();
     } else {
-      // 코인 소모 확인
       setConfirmCoin(true);
     }
   };
@@ -115,8 +119,9 @@ export function AiCoach() {
   };
 
   // 무료 사용까지 남은 일수
-  const daysUntilFree = aiWeeklyUsedAt && !canUseFree
-    ? Math.ceil((7 * 24 * 60 * 60 * 1000 - (Date.now() - aiWeeklyUsedAt.getTime())) / (24 * 60 * 60 * 1000))
+  const lastUsed = typeof window !== "undefined" ? Number(localStorage.getItem(WEEKLY_KEY) ?? 0) : 0;
+  const daysUntilFree = !checkCanUseFree() && lastUsed
+    ? Math.ceil((7 * 24 * 60 * 60 * 1000 - (Date.now() - lastUsed)) / (24 * 60 * 60 * 1000))
     : 0;
 
   return (
@@ -125,7 +130,7 @@ export function AiCoach() {
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4" style={{ color: "var(--blue)" }} />
           <span className="text-sm font-semibold" style={{ color: "var(--text-1)" }}>AI 루틴 코치</span>
-          {!canUseFree && !isSubscribed && (
+          {!checkCanUseFree() && !isSubscribed && (
             <span className="text-[10px] px-1.5 py-0.5 rounded-full"
               style={{ background: "rgba(136,192,224,0.08)", color: "var(--text-4)", border: "1px solid var(--border-2)" }}>
               {daysUntilFree}일 후 무료
